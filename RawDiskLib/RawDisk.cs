@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using DeviceIOControlLib;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib.Helpers;
+using FileAttributes = System.IO.FileAttributes;
 
 namespace RawDiskLib
 {
