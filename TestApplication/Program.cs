@@ -13,6 +13,7 @@ namespace TestApplication
         static void Main(string[] args)
         {
             List<string> devs = Utils.GetAvailableDrives();
+            const int sectorsToRead = 100;
 
             // Volumes (C:, E: ..)
             {
@@ -23,10 +24,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk dik = new RawDisk(device);
-                        byte[] data = dik.Read(0, 10);
+                        RawDisk disk = new RawDisk(device);
+                        byte[] data = disk.Read(0, (int)Math.Min(disk.SectorCount, sectorsToRead));
 
-                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                        Console.WriteLine("Ok, got {0:N0} bytes", data.Length);
                     }
                     catch (Win32Exception exception)
                     {
@@ -34,6 +35,8 @@ namespace TestApplication
                     }
                 }
             }
+
+            Console.WriteLine();
 
             // Physical Drives (PhysicalDrive0, PhysicalDrive1 ..)
             {
@@ -44,10 +47,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk dik = new RawDisk(DiskNumberType.PhysicalDisk, device);
-                        byte[] data = dik.Read(0, 10);
+                        RawDisk disk = new RawDisk(DiskNumberType.PhysicalDisk, device);
+                        byte[] data = disk.Read(0, (int)Math.Min(disk.SectorCount, sectorsToRead));
 
-                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                        Console.WriteLine("Ok, got {0:N0} bytes", data.Length);
                     }
                     catch (Win32Exception exception)
                     {
@@ -55,6 +58,8 @@ namespace TestApplication
                     }
                 }
             }
+
+            Console.WriteLine();
 
             // Harddisk Volumes (HarddiskVolume1, HarddiskVolume2 ..)
             {
@@ -65,10 +70,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk dik = new RawDisk(DiskNumberType.Volume, device);
-                        byte[] data = dik.Read(0, 10);
+                        RawDisk disk = new RawDisk(DiskNumberType.Volume, device);
+                        byte[] data = disk.Read(0, (int)Math.Min(disk.SectorCount, sectorsToRead));
 
-                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                        Console.WriteLine("Ok, got {0:N0} bytes", data.Length);
                     }
                     catch (Win32Exception exception)
                     {
