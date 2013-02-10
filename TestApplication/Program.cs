@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
+using System.ComponentModel;
 using System.Text;
-using DeviceIOControlLib;
-using System.Linq;
 using RawDiskLib;
+using RawDiskLib.Helpers;
+using System.Linq;
 
 namespace TestApplication
 {
@@ -13,13 +12,73 @@ namespace TestApplication
     {
         static void Main(string[] args)
         {
-            RawDisk disk = new RawDisk('C');
+            List<string> devs = Utils.GetAvailableDrives();
 
-            byte[] ntfsBootSector = disk.Read(0, 1);
+            // Volumes (C:, E: ..)
+            {
+                List<char> devices = devs.Where(s => s.Length == 2 && s.EndsWith(":")).Select(s => s[0]).ToList();
+                foreach (char device in devices)
+                {
+                    Console.Write("Trying volume, " + device + ": .. ");
 
-            // First 3 bytes is some random thing, then the next 4 bytes should contain "NTFS" in ascii
-            string first8Bytes = Encoding.ASCII.GetString(ntfsBootSector, 3, 4);
-            Console.WriteLine(first8Bytes);
+                    try
+                    {
+                        RawDisk dik = new RawDisk(device);
+                        byte[] data = dik.Read(0, 10);
+
+                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                    }
+                    catch (Win32Exception exception)
+                    {
+                        Console.WriteLine("Error: " + exception.Message);
+                    }
+                }
+            }
+
+            // Physical Drives (PhysicalDrive0, PhysicalDrive1 ..)
+            {
+                List<int> devices = devs.Where(s => s.StartsWith("PhysicalDrive")).Select(s => int.Parse(s.Substring("PhysicalDrive".Length))).ToList();
+                foreach (int device in devices)
+                {
+                    Console.Write("Trying PhysicalDrive" + device + ": .. ");
+
+                    try
+                    {
+                        RawDisk dik = new RawDisk(DiskNumberType.PhysicalDisk, device);
+                        byte[] data = dik.Read(0, 10);
+
+                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                    }
+                    catch (Win32Exception exception)
+                    {
+                        Console.WriteLine("Error: " + exception.Message);
+                    }
+                }
+            }
+
+            // Harddisk Volumes (HarddiskVolume1, HarddiskVolume2 ..)
+            {
+                List<int> devices = devs.Where(s => s.StartsWith("HarddiskVolume")).Select(s => int.Parse(s.Substring("HarddiskVolume".Length))).ToList();
+                foreach (int device in devices)
+                {
+                    Console.Write("Trying HarddiskVolume" + device + ": .. ");
+
+                    try
+                    {
+                        RawDisk dik = new RawDisk(DiskNumberType.Volume, device);
+                        byte[] data = dik.Read(0, 10);
+
+                        Console.WriteLine("Ok, got " + data.Length + " bytes");
+                    }
+                    catch (Win32Exception exception)
+                    {
+                        Console.WriteLine("Error: " + exception.Message);
+                    }
+                }
+            }
+
+            Console.WriteLine("Done");
+            Console.ReadLine();
         }
     }
 }

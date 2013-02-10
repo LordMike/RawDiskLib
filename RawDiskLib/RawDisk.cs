@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -28,48 +29,42 @@ namespace RawDiskLib
     public class RawDisk : IDisposable
     {
         private SafeFileHandle _diskHandle;
+        private FileStream _diskFs;
         private DeviceIOControlWrapper _deviceIo;
-        private DISK_GEOMETRY_EX _diskInfo;
-        private PARTITION_INFORMATION_EX _partitionInfo;
+        private DISK_GEOMETRY _diskInfo;
+
+        private long _deviceLength;
 
         public long SizeBytes
         {
-            get { return _partitionInfo.PartitionLength; }
+            get { return _deviceLength; }
         }
         public long SectorCount
         {
-            get { return _partitionInfo.PartitionLength / SectorSize; }
+            get { return _deviceLength / SectorSize; }
         }
         public int SectorSize
         {
-            get { return _diskInfo.Geometry.BytesPerSector; }
-        }
-
-        public long DiskOffsetSectors
-        {
-            get { return _partitionInfo.StartingOffset / SectorSize; }
-        }
-
-        public bool IsPartition
-        {
-            get
-            {
-                return (_partitionInfo.PartitionStyle == PartitionStyle.PARTITION_STYLE_MBR && _partitionInfo.DriveLayoutInformaiton.Mbr.RecognizedPartition) ||
-                        (_partitionInfo.PartitionStyle == PartitionStyle.PARTITION_STYLE_GPT);
-            }
+            get { return _diskInfo.BytesPerSector; }
         }
 
         public string DosDeviceName { get; private set; }
 
-        public PARTITION_INFORMATION_EX PartitionInfo
-        {
-            get { return _partitionInfo; }
-        }
-        public DISK_GEOMETRY_EX DiskInfo
+        public DISK_GEOMETRY DiskInfo
         {
             get { return _diskInfo; }
         }
 
+        public RawDisk(char driveLetter)
+        {
+            if (!char.IsLetter(driveLetter))
+                throw new ArgumentException("Invalid drive letter");
+
+            driveLetter = char.ToUpper(driveLetter);
+
+            string path = string.Format(@"\\.\{0}:", driveLetter);
+            InitateVolume(path);
+        }
         public RawDisk(DiskNumberType type, int number)
         {
             if (number < 0)
@@ -87,17 +82,7 @@ namespace RawDiskLib
                 default:
                     throw new ArgumentOutOfRangeException("type");
             }
-            Initate(path);
-        }
-        public RawDisk(char driveLetter)
-        {
-            if (!char.IsLetter(driveLetter))
-                throw new ArgumentException("Invalid drive letter");
-
-            driveLetter = char.ToUpper(driveLetter);
-
-            string path = string.Format(@"\\.\{0}:", driveLetter);
-            Initate(path);
+            InitateDevice(path);
         }
         public RawDisk(DriveInfo drive)
         {
@@ -107,10 +92,10 @@ namespace RawDiskLib
             char driveLetter = drive.Name.ToUpper()[0];
 
             string path = string.Format(@"\\.\{0}:", driveLetter);
-            Initate(path);
+            InitateVolume(path);
         }
 
-        private void Initate(string dosName)
+        private void InitateDevice(string dosName)
         {
             Debug.WriteLine("Initiating with " + dosName);
 
@@ -121,9 +106,26 @@ namespace RawDiskLib
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
+            _diskFs = new FileStream(_diskHandle, FileAccess.Read);
 
-            _diskInfo = _deviceIo.DiskGetDriveGeometryEx();
-            _partitionInfo = _deviceIo.DiskGetPartitionInfoEx();
+            _diskInfo = _deviceIo.DiskGetDriveGeometry();
+            _deviceLength = _deviceIo.DiskGetLengthInfo();
+        }
+        private void InitateVolume(string dosName)
+        {
+            Debug.WriteLine("Initiating with " + dosName);
+
+            _diskHandle = Win32Helper.CreateFile(dosName, FileAccess.Read, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            DosDeviceName = dosName;
+
+            if (_diskHandle.IsInvalid)
+                throw new ArgumentException("Invalid diskName: " + dosName);
+
+            _deviceIo = new DeviceIOControlWrapper(_diskHandle);
+            _diskFs = new FileStream(_diskHandle, FileAccess.Read);
+
+            _diskInfo = _deviceIo.DiskGetDriveGeometry();
+            _deviceLength = _deviceIo.DiskGetLengthInfo();
         }
 
         public byte[] Read(long sector, int sectors)
@@ -134,19 +136,17 @@ namespace RawDiskLib
                 throw new ArgumentException("Out of bounds");
 
             long offsetBytes = sector * SectorSize;
+            long newOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
 
-            using (FileStream fs = new FileStream(_diskHandle, FileAccess.Read))
-            {
-                long newOffset = fs.Seek(offsetBytes, SeekOrigin.Begin);
+            Debug.Assert(newOffset == offsetBytes);
 
-                byte[] data = new byte[SectorSize * sectors];
-                int wasRead = fs.Read(data, 0, data.Length);
+            byte[] data = new byte[SectorSize * sectors];
+            int wasRead = _diskFs.Read(data, 0, data.Length);
 
-                if (wasRead == 0)
-                    throw new EndOfStreamException();
+            if (wasRead == 0)
+                throw new EndOfStreamException();
 
-                return data;
-            }
+            return data;
         }
 
         public void Dispose()
