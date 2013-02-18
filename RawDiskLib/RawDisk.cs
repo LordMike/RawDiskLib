@@ -39,11 +39,11 @@ namespace RawDiskLib
             get { return _clusterSize; }
         }
 
-        public long SectorCount1
+        public long SectorCount
         {
             get { return _deviceLength / _diskInfo.BytesPerSector; }
         }
-        public int SectorSize1
+        public int SectorSize
         {
             get { return _diskInfo.BytesPerSector; }
         }

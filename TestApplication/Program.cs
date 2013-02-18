@@ -206,7 +206,7 @@ namespace TestApplication
 
             Console.WriteLine("Size in bytes : {0:N0}", disk.SizeBytes);
             Console.WriteLine("Sectors       : {0:N0}", disk.ClusterCount);
-            Console.WriteLine("SectorSize    : {0:N0}", disk.SectorSize1);
+            Console.WriteLine("SectorSize    : {0:N0}", disk.SectorSize);
             Console.WriteLine("ClusterCount  : {0:N0}", disk.ClusterCount);
             Console.WriteLine("ClusterSize   : {0:N0}", disk.ClusterSize);
 
