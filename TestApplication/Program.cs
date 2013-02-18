@@ -157,7 +157,8 @@ namespace TestApplication
 
         private static void CopyFile(string sourceFile, string dstFile)
         {
-            SafeFileHandle fileHandle = CreateFile(sourceFile, FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            // FileAttributes 0x20000000L = FILE_FLAG_NO_BUFFERING
+            SafeFileHandle fileHandle = CreateFile(sourceFile, FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal | (FileAttributes) 0x20000000L, IntPtr.Zero);
 
             if (fileHandle.IsInvalid)
                 throw new ArgumentException("Invalid file: " + sourceFile);
