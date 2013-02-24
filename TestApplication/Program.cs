@@ -182,7 +182,7 @@ namespace TestApplication
                     for (ulong offset = 0; offset < fileExtentInfo.Size; offset += 10000)
                     {
                         int currentSizeBytes = (int)Math.Min(10000, fileExtentInfo.Size - offset);
-                        byte[] data = disk.Read((long)(fileExtentInfo.Lcn + offset), currentSizeBytes);
+                        byte[] data = disk.ReadClusters((long)(fileExtentInfo.Lcn + offset), currentSizeBytes);
                         fs.Write(data, 0, data.Length);
 
                         copiedBytes += currentSizeBytes;
@@ -195,7 +195,7 @@ namespace TestApplication
 
         private static void PresentResult(RawDisk disk)
         {
-            byte[] data = disk.Read(0, (int)Math.Min(disk.ClusterCount, ClustersToRead));
+            byte[] data = disk.ReadClusters(0, (int)Math.Min(disk.ClusterCount, ClustersToRead));
 
             string fatType = Encoding.ASCII.GetString(data, 82, 8);     // Extended FAT parameters have a display name here.
             bool isFat = fatType.StartsWith("FAT");

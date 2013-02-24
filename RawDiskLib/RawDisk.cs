@@ -136,10 +136,10 @@ namespace RawDiskLib
             }
         }
 
-        public byte[] Read(long cluster, int clusters)
+        public byte[] ReadClusters(long cluster, int clusters)
         {
             if (clusters < 1)
-                throw new ArgumentException("sectors");
+                throw new ArgumentException("clusters");
             if (cluster < 0 || cluster + clusters > ClusterCount)
                 throw new ArgumentException("Out of bounds");
 
@@ -149,6 +149,27 @@ namespace RawDiskLib
             Debug.Assert(newOffset == offsetBytes);
 
             byte[] data = new byte[ClusterSize * clusters];
+            int wasRead = _diskFs.Read(data, 0, data.Length);
+
+            if (wasRead == 0)
+                throw new EndOfStreamException();
+
+            return data;
+        }
+
+        public byte[] ReadSectors(long sector, int sectors)
+        {
+            if (sectors < 1)
+                throw new ArgumentException("sectors");
+            if (sector < 0 || sector + sectors > SectorCount)
+                throw new ArgumentException("Out of bounds");
+
+            long offsetBytes = sector * SectorSize;
+            long newOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
+
+            Debug.Assert(newOffset == offsetBytes);
+
+            byte[] data = new byte[SectorSize * sectors];
             int wasRead = _diskFs.Read(data, 0, data.Length);
 
             if (wasRead == 0)
