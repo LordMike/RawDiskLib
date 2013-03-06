@@ -223,6 +223,12 @@ namespace RawDiskLib
             return wasRead;
         }
 
+        public RawDiskStream GetStream()
+        {
+            // TODO: Return the same object - possibly as a property?
+            return new RawDiskStream(_diskFs, SectorSize);
+        }
+
         public void Dispose()
         {
             if (!_diskHandle.IsClosed)
