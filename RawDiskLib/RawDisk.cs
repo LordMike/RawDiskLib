@@ -26,7 +26,6 @@ namespace RawDiskLib
         private long _deviceLength;
         private int _clusterSize;
         private int _sectorsPrCluster;
-        private long _lastOffset;
 
         public long SizeBytes
         {
@@ -57,10 +56,12 @@ namespace RawDiskLib
             get { return _diskInfo; }
         }
 
-        public RawDisk(DiskNumberType type, int number)
+        public RawDisk(DiskNumberType type, int number, FileAccess access = FileAccess.Read)
         {
             if (number < 0)
                 throw new ArgumentException("Invalid number");
+            if (!access.HasFlag(FileAccess.Read))
+                throw new ArgumentException("Access must include read");
 
             string path;
             switch (type)
@@ -74,41 +75,46 @@ namespace RawDiskLib
                 default:
                     throw new ArgumentOutOfRangeException("type");
             }
-            InitateDevice(path);
+
+            InitateDevice(path, access);
         }
 
-        public RawDisk(char driveLetter)
+        public RawDisk(char driveLetter, FileAccess access = FileAccess.Read)
         {
             if (!char.IsLetter(driveLetter))
                 throw new ArgumentException("Invalid drive letter");
+            if (!access.HasFlag(FileAccess.Read))
+                throw new ArgumentException("Access must include read");
 
             driveLetter = char.ToUpper(driveLetter);
 
-            InitateVolume(driveLetter);
+            InitateVolume(driveLetter, access);
         }
 
-        public RawDisk(DriveInfo drive)
+        public RawDisk(DriveInfo drive, FileAccess access = FileAccess.Read)
         {
             if (drive == null)
                 throw new ArgumentNullException("drive");
+            if (!access.HasFlag(FileAccess.Read))
+                throw new ArgumentException("Access must include read");
 
             char driveLetter = drive.Name.ToUpper()[0];
 
-            InitateVolume(driveLetter);
+            InitateVolume(driveLetter, access);
         }
 
-        private void InitateDevice(string dosName)
+        private void InitateDevice(string dosName, FileAccess access)
         {
             Debug.WriteLine("Initiating with " + dosName);
 
-            _diskHandle = Win32Helper.CreateFile(dosName, FileAccess.Read, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            _diskHandle = Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
             DosDeviceName = dosName;
 
             if (_diskHandle.IsInvalid)
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = new FileStream(_diskHandle, FileAccess.Read);
+            _diskFs = new FileStream(_diskHandle, access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
@@ -116,19 +122,19 @@ namespace RawDiskLib
             _sectorsPrCluster = _clusterSize / _diskInfo.BytesPerSector;
         }
 
-        private void InitateVolume(char driveLetter)
+        private void InitateVolume(char driveLetter, FileAccess access)
         {
             string dosName = string.Format(@"\\.\{0}:", driveLetter);
             Debug.WriteLine("Initiating with " + dosName);
 
-            _diskHandle = Win32Helper.CreateFile(dosName, FileAccess.Read, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            _diskHandle = Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
             DosDeviceName = dosName;
 
             if (_diskHandle.IsInvalid)
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = new FileStream(_diskHandle, FileAccess.Read);
+            _diskFs = new FileStream(_diskHandle, access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
@@ -141,6 +147,26 @@ namespace RawDiskLib
                 _clusterSize = (int)(bytesPerSector * sectorsPerCluster);
                 _sectorsPrCluster = (int)sectorsPerCluster;
             }
+        }
+
+        public void WriteClusters(byte[] data, long cluster)
+        {
+            int clusters = data.Length / ClusterSize;
+
+            if (data.Length % ClusterSize != 0)
+                throw new ArgumentException("Data length");
+            if (cluster < 0 || cluster + clusters > ClusterCount)
+                throw new ArgumentException("Out of bounds");
+
+            long offsetBytes = cluster * ClusterSize;
+
+            long actualOffset = _diskFs.Position;
+            if (_diskFs.Position != offsetBytes)
+                actualOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
+
+            Debug.Assert(actualOffset == offsetBytes);
+
+            _diskFs.Write(data, 0, data.Length);
         }
 
         public byte[] ReadClusters(long cluster, int clusters)
@@ -186,14 +212,13 @@ namespace RawDiskLib
 
             long offsetBytes = sector * SectorSize;
 
-            if (_lastOffset != offsetBytes)
-                _lastOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
+            long actualOffset = _diskFs.Position;
+            if (_diskFs.Position != offsetBytes)
+                actualOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
 
-            Debug.Assert(_lastOffset == offsetBytes);
+            Debug.Assert(actualOffset == offsetBytes);
 
             int wasRead = _diskFs.Read(buffer, bufferOffset, sectors * SectorSize);
-
-            _lastOffset += wasRead;
 
             return wasRead;
         }

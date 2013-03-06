@@ -13,7 +13,7 @@ using FileAttributes = System.IO.FileAttributes;
 
 namespace TestApplication
 {
-    class Program
+    public class Program
     {
         public const uint FILE_READ_ATTRIBUTES = (0x0080);
         public const uint FILE_WRITE_ATTRIBUTES = 0x0100;
@@ -28,7 +28,7 @@ namespace TestApplication
            [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
            IntPtr hTemplateFile);
 
-        const ConsoleColor DefaultColor = ConsoleColor.White;
+        private static ConsoleColor _defaultColor;
         const int ClustersToRead = 100;
 
         static void Main(string[] args)
@@ -39,7 +39,7 @@ namespace TestApplication
             List<int> harddiskVolumes = devs.Where(s => s.StartsWith("HarddiskVolume")).Select(s => int.Parse(s.Substring("HarddiskVolume".Length))).ToList();
             List<int> physicalDrives = devs.Where(s => s.StartsWith("PhysicalDrive")).Select(s => int.Parse(s.Substring("PhysicalDrive".Length))).ToList();
 
-            Console.ForegroundColor = DefaultColor;
+            _defaultColor = Console.ForegroundColor;
 
             // Volumes (C:, E: ..)
             {
@@ -56,7 +56,7 @@ namespace TestApplication
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("Error: " + new Win32Exception(exception.NativeErrorCode).Message);
-                        Console.ForegroundColor = DefaultColor;
+                        Console.ForegroundColor = _defaultColor;
                     }
 
                     Console.WriteLine();
@@ -82,7 +82,7 @@ namespace TestApplication
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("Error: " + new Win32Exception(exception.NativeErrorCode).Message);
-                        Console.ForegroundColor = DefaultColor;
+                        Console.ForegroundColor = _defaultColor;
                     }
 
                     Console.WriteLine();
@@ -108,7 +108,7 @@ namespace TestApplication
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("Error: " + new Win32Exception(exception.NativeErrorCode).Message);
-                        Console.ForegroundColor = DefaultColor;
+                        Console.ForegroundColor = _defaultColor;
                     }
 
                     Console.WriteLine();
@@ -147,8 +147,148 @@ namespace TestApplication
                         Console.WriteLine("Error: " + exception.Message);
                     }
 
-                    Console.ForegroundColor = DefaultColor;
+                    Console.ForegroundColor = _defaultColor;
                     Console.WriteLine();
+                }
+            }
+
+            Console.WriteLine("Done with Copy of $MFT files, beginning Writing, type ENTER to proceed.");
+            Console.ReadLine();
+            Console.Clear();
+
+            // Writing
+            {
+                Console.WriteLine("You need to enter a volume on which to write and read. Note that this volume will be useless afterwards - do not chose anything by test volumes!");
+                Console.WriteLine("Select volume:");
+                List<int> options = new List<int>();
+
+                foreach (int harddiskVolume in harddiskVolumes)
+                {
+                    try
+                    {
+                        RawDisk disk = new RawDisk(DiskNumberType.Volume, harddiskVolume);
+
+                        Console.WriteLine("  {0:N0}: {1:N0} Bytes", harddiskVolume, disk.SizeBytes);
+                        options.Add(harddiskVolume);
+                    }
+                    catch (Exception)
+                    {
+                        // Don't write it
+                    }
+                }
+
+                string vol;
+                int selectedVol;
+                do
+                {
+                    Console.WriteLine("Enter #:");
+                    vol = Console.ReadLine();
+                } while (!(int.TryParse(vol, out selectedVol) && options.Contains(selectedVol)));
+
+                Console.WriteLine("Selected " + selectedVol + ".");
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Are you sure? Type YES.");
+                Console.ForegroundColor = _defaultColor;
+
+                bool allSuccess = false;
+
+                string confirm = Console.ReadLine();
+                if (confirm == "YES")
+                {
+                    Console.WriteLine("Confirmed - starting");
+
+                    RawDisk disk = new RawDisk(DiskNumberType.Volume, selectedVol, FileAccess.ReadWrite);
+
+                    long chunks = disk.ClusterCount / ClustersToRead;
+
+                    Console.WriteLine("Disk {0} is {1:N0} Bytes large.", disk.DosDeviceName, disk.SizeBytes);
+                    Console.WriteLine("Beginning random write in {0:N0} cluster chunks of {1:N0} Bytes each", ClustersToRead, disk.ClusterSize);
+                    Console.WriteLine(" # of chunks: {0:N0}", chunks);
+
+                    byte[] chunkData = new byte[disk.ClusterSize * ClustersToRead];
+                    byte[] readData = new byte[disk.ClusterSize * ClustersToRead];
+                    Random rand = new Random();
+
+                    StringBuilder blankLineBuilder = new StringBuilder(Console.BufferWidth);
+                    for (int i = 0; i < Console.BufferWidth; i++)
+                        blankLineBuilder.Append(' ');
+                    string blankLine = blankLineBuilder.ToString();
+
+                    allSuccess = true;
+
+                    for (int chunk = 0; chunk < chunks; chunk++)
+                    {
+                        rand.NextBytes(chunkData);
+
+                        Console.Write("Chunk #{0}: ", chunk);
+
+                        try
+                        {
+                            // Write
+                            Console.Write("Writing ... ");
+
+                            disk.WriteClusters(chunkData, chunk * ClustersToRead);
+
+                            // Read
+                            Console.Write("Reading ... ");
+
+                            disk.ReadClusters(readData, 0, chunk * ClustersToRead, ClustersToRead);
+
+                            // Check
+                            if (chunkData.SequenceEqual(readData))
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine("Confirmed!");
+                                Console.ForegroundColor = _defaultColor;
+                            }
+                            else
+                            {
+                                allSuccess = false;
+
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Failed!");
+                                Console.ForegroundColor = _defaultColor;
+
+                                Console.WriteLine("Presse enter to proceed.");
+                                Console.ReadLine();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            allSuccess = false;
+
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Error: " + ex.Message);
+                            Console.ForegroundColor = _defaultColor;
+
+                            Console.WriteLine("Presse enter to proceed.");
+                            Console.ReadLine();
+                        }
+
+                        Console.CursorTop--;
+                        Console.CursorLeft = 0;
+                        Console.Write(blankLine);
+                        Console.CursorTop--;
+                        Console.CursorLeft = 0;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Aborted");
+                }
+
+                if (allSuccess)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("All chunks were able to write and read successfully.");
+                    Console.ForegroundColor = _defaultColor;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Some chunks were unable to be read correctly.");
+                    Console.ForegroundColor = _defaultColor;
                 }
             }
 
@@ -218,7 +358,7 @@ namespace TestApplication
                 Console.ForegroundColor = ConsoleColor.Green;
 
             Console.WriteLine("Is NTFS       : {0}", isNTFS);
-            Console.ForegroundColor = DefaultColor;
+            Console.ForegroundColor = _defaultColor;
 
             if (!isFat && !isNTFS)
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -227,7 +367,7 @@ namespace TestApplication
                 Console.ForegroundColor = ConsoleColor.Green;
 
             Console.WriteLine("Is FAT        : {0}", isFat ? fatType : "False");
-            Console.ForegroundColor = DefaultColor;
+            Console.ForegroundColor = _defaultColor;
 
             if (!allZero)
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -235,7 +375,7 @@ namespace TestApplication
                 Console.ForegroundColor = ConsoleColor.Red;
 
             Console.WriteLine("All bytes zero: {0}", allZero);
-            Console.ForegroundColor = DefaultColor;
+            Console.ForegroundColor = _defaultColor;
         }
     }
 }
