@@ -63,10 +63,9 @@ namespace TestApplication
                 }
             }
 
-            Console.WriteLine("Done with Volumes, type ENTER to proceed.");
+            Console.WriteLine("Done with Volumes, beginning Physical Drives, type ENTER to proceed.");
             Console.ReadLine();
-            Console.WriteLine();
-            Console.WriteLine();
+            Console.Clear();
 
             // Physical Drives (PhysicalDrive0, PhysicalDrive1 ..)
             {
@@ -81,17 +80,18 @@ namespace TestApplication
                     }
                     catch (Win32Exception exception)
                     {
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("Error: " + new Win32Exception(exception.NativeErrorCode).Message);
+                        Console.ForegroundColor = DefaultColor;
                     }
 
                     Console.WriteLine();
                 }
             }
 
-            Console.WriteLine("Done with Physical Drives, type ENTER to proceed.");
+            Console.WriteLine("Done with Physical Drives, beginning Harddisk Volumes, type ENTER to proceed.");
             Console.ReadLine();
-            Console.WriteLine();
-            Console.WriteLine();
+            Console.Clear();
 
             // Harddisk Volumes (HarddiskVolume1, HarddiskVolume2 ..)
             {
@@ -106,17 +106,18 @@ namespace TestApplication
                     }
                     catch (Win32Exception exception)
                     {
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("Error: " + new Win32Exception(exception.NativeErrorCode).Message);
+                        Console.ForegroundColor = DefaultColor;
                     }
 
                     Console.WriteLine();
                 }
             }
 
-            Console.WriteLine("Done with Harddisk Volumes, type ENTER to proceed.");
+            Console.WriteLine("Done with Harddisk Volumes, beginning Copy of $MFT files, type ENTER to proceed.");
             Console.ReadLine();
-            Console.WriteLine();
-            Console.WriteLine();
+            Console.Clear();
 
             // Copy MFT files
             {
@@ -138,7 +139,7 @@ namespace TestApplication
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine("Copied    : {0:N0} bytes to '{1}'", targetFileSize, dstFile);
                         Console.WriteLine("Time used : {0:N1} ms", sw.ElapsedMilliseconds);
-                        Console.WriteLine("Speed     : {0:N2} MB/s", (targetFileSize / 1024) / (sw.ElapsedMilliseconds / 1000));
+                        Console.WriteLine("Speed     : {0:N2} MB/s", (targetFileSize / 1024) / sw.Elapsed.TotalMilliseconds);
                     }
                     catch (Exception exception)
                     {
@@ -158,7 +159,7 @@ namespace TestApplication
         private static void CopyFile(string sourceFile, string dstFile)
         {
             // FileAttributes 0x20000000L = FILE_FLAG_NO_BUFFERING
-            SafeFileHandle fileHandle = CreateFile(sourceFile, FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal | (FileAttributes) 0x20000000L, IntPtr.Zero);
+            SafeFileHandle fileHandle = CreateFile(sourceFile, FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal | (FileAttributes)0x20000000L, IntPtr.Zero);
 
             if (fileHandle.IsInvalid)
                 throw new ArgumentException("Invalid file: " + sourceFile);

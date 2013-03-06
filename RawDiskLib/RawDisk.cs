@@ -25,6 +25,8 @@ namespace RawDiskLib
 
         private long _deviceLength;
         private int _clusterSize;
+        private int _sectorsPrCluster;
+        private long _lastOffset;
 
         public long SizeBytes
         {
@@ -74,6 +76,7 @@ namespace RawDiskLib
             }
             InitateDevice(path);
         }
+
         public RawDisk(char driveLetter)
         {
             if (!char.IsLetter(driveLetter))
@@ -83,6 +86,7 @@ namespace RawDiskLib
 
             InitateVolume(driveLetter);
         }
+
         public RawDisk(DriveInfo drive)
         {
             if (drive == null)
@@ -109,7 +113,9 @@ namespace RawDiskLib
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
             _clusterSize = _diskInfo.BytesPerSector;
+            _sectorsPrCluster = _clusterSize / _diskInfo.BytesPerSector;
         }
+
         private void InitateVolume(char driveLetter)
         {
             string dosName = string.Format(@"\\.\{0}:", driveLetter);
@@ -133,49 +139,63 @@ namespace RawDiskLib
             if (success)
             {
                 _clusterSize = (int)(bytesPerSector * sectorsPerCluster);
+                _sectorsPrCluster = (int)sectorsPerCluster;
             }
         }
 
         public byte[] ReadClusters(long cluster, int clusters)
         {
-            if (clusters < 1)
-                throw new ArgumentException("clusters");
-            if (cluster < 0 || cluster + clusters > ClusterCount)
-                throw new ArgumentException("Out of bounds");
-
-            long offsetBytes = cluster * ClusterSize;
-            long newOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
-
-            Debug.Assert(newOffset == offsetBytes);
-
             byte[] data = new byte[ClusterSize * clusters];
-            int wasRead = _diskFs.Read(data, 0, data.Length);
-
-            if (wasRead == 0)
-                throw new EndOfStreamException();
+            ReadClusters(data, 0, cluster, clusters);
 
             return data;
         }
 
+        public int ReadClusters(byte[] buffer, int bufferOffset, long cluster, int clusters)
+        {
+            if (clusters < 1)
+                throw new ArgumentException("clusters");
+            if (cluster < 0 || cluster + clusters > ClusterCount)
+                throw new ArgumentException("Out of bounds");
+            if (buffer.Length - bufferOffset < clusters * ClusterSize)
+                throw new ArgumentException("Buffer not large enough");
+            if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
+                throw new ArgumentOutOfRangeException("bufferOffset");
+
+            return ReadSectors(buffer, bufferOffset, cluster * _sectorsPrCluster, clusters * _sectorsPrCluster);
+        }
+
         public byte[] ReadSectors(long sector, int sectors)
+        {
+            byte[] data = new byte[SectorSize * sectors];
+            ReadSectors(data, 0, sector, sectors);
+
+            return data;
+        }
+
+        public int ReadSectors(byte[] buffer, int bufferOffset, long sector, int sectors)
         {
             if (sectors < 1)
                 throw new ArgumentException("sectors");
             if (sector < 0 || sector + sectors > SectorCount)
                 throw new ArgumentException("Out of bounds");
+            if (buffer.Length - bufferOffset < sectors * SectorSize)
+                throw new ArgumentException("Buffer not large enough");
+            if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
+                throw new ArgumentOutOfRangeException("bufferOffset");
 
             long offsetBytes = sector * SectorSize;
-            long newOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
 
-            Debug.Assert(newOffset == offsetBytes);
+            if (_lastOffset != offsetBytes)
+                _lastOffset = _diskFs.Seek(offsetBytes, SeekOrigin.Begin);
 
-            byte[] data = new byte[SectorSize * sectors];
-            int wasRead = _diskFs.Read(data, 0, data.Length);
+            Debug.Assert(_lastOffset == offsetBytes);
 
-            if (wasRead == 0)
-                throw new EndOfStreamException();
+            int wasRead = _diskFs.Read(buffer, bufferOffset, sectors * SectorSize);
 
-            return data;
+            _lastOffset += wasRead;
+
+            return wasRead;
         }
 
         public void Dispose()
