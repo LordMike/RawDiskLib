@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using DeviceIOControlLib;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib;
 using System.Linq;
+using RawDiskLib.Helpers;
 using FileAttributes = System.IO.FileAttributes;
 
 namespace TestApplication
@@ -18,16 +18,6 @@ namespace TestApplication
     {
         public const uint FILE_READ_ATTRIBUTES = (0x0080);
         public const uint FILE_WRITE_ATTRIBUTES = 0x0100;
-
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern SafeFileHandle CreateFile(
-           string lpFileName,
-           [MarshalAs(UnmanagedType.U4)] uint dwDesiredAccess,
-           [MarshalAs(UnmanagedType.U4)] FileShare dwShareMode,
-           IntPtr lpSecurityAttributes,
-           [MarshalAs(UnmanagedType.U4)] FileMode dwCreationDisposition,
-           [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
-           IntPtr hTemplateFile);
 
         private static ConsoleColor _defaultColor;
         const int ClustersToRead = 100;
@@ -396,7 +386,7 @@ namespace TestApplication
         private static void CopyFile(string sourceFile, string dstFile)
         {
             // FileAttributes 0x20000000L = FILE_FLAG_NO_BUFFERING
-            SafeFileHandle fileHandle = CreateFile(sourceFile, FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal | (FileAttributes)0x20000000L, IntPtr.Zero);
+            SafeFileHandle fileHandle = Win32Helper.CreateFile(sourceFile, (FileAccess) FILE_READ_ATTRIBUTES, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal | (FileAttributes)0x20000000L, IntPtr.Zero);
 
             if (fileHandle.IsInvalid)
                 throw new ArgumentException("Invalid file: " + sourceFile);
