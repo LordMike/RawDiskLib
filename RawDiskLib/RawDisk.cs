@@ -18,6 +18,7 @@ namespace RawDiskLib
            out uint lpNumberOfFreeClusters,
            out uint lpTotalNumberOfClusters);
 
+        private FileAccess _access;
         private SafeFileHandle _diskHandle;
         private FileStream _diskFs;
         private DeviceIOControlWrapper _deviceIo;
@@ -113,8 +114,10 @@ namespace RawDiskLib
             if (_diskHandle.IsInvalid)
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
+            _access = access;
+
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = new FileStream(_diskHandle, access);
+            _diskFs = CreateDiskFileStream();
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
@@ -133,8 +136,10 @@ namespace RawDiskLib
             if (_diskHandle.IsInvalid)
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
+            _access = access;
+
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = new FileStream(_diskHandle, access);
+            _diskFs = CreateDiskFileStream();
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
@@ -223,10 +228,16 @@ namespace RawDiskLib
             return wasRead;
         }
 
-        public RawDiskStream GetStream()
+        public RawDiskStream CreateDiskStream()
         {
-            // TODO: Return the same object - possibly as a property?
-            return new RawDiskStream(_diskFs, SectorSize);
+            FileStream diskFs = CreateDiskFileStream();
+
+            return new RawDiskStream(diskFs, SectorSize, SizeBytes);
+        }
+
+        private FileStream CreateDiskFileStream()
+        {
+            return new FileStream(_diskHandle, _access);
         }
 
         public void Dispose()

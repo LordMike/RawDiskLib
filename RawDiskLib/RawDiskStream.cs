@@ -8,11 +8,13 @@ namespace RawDiskLib
     {
         private readonly FileStream _diskStream;
         private readonly int _smallestChunkSize;
+        private readonly long _length;
 
-        internal RawDiskStream(FileStream diskStream, int smallestChunkSize)
+        internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length)
         {
             _diskStream = diskStream;
             _smallestChunkSize = smallestChunkSize;
+            _length = length;
         }
 
         public override void Flush()
@@ -79,7 +81,7 @@ namespace RawDiskLib
             else
             {
                 // Do a temporary buffer
-                byte[] data = new byte[chunks * _smallestChunkSize];
+                byte[] data = new byte[(chunks + 1) * _smallestChunkSize];
                 _diskStream.Read(data, 0, data.Length);
 
                 Array.Copy(data, Position % _smallestChunkSize, buffer, offset, count);
@@ -173,7 +175,7 @@ namespace RawDiskLib
 
         public override long Length
         {
-            get { return _diskStream.Length; }
+            get { return _length; }
         }
 
         public override long Position { get; set; }
