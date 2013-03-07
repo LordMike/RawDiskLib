@@ -37,6 +37,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DiskHelper.cs" />
+    <Compile Include="Examples\ExampleBase.cs" />
+    <Compile Include="Examples\ExampleCopyMFT.cs" />
+    <Compile Include="Examples\ExampleHarddiskVolumes.cs" />
+    <Compile Include="Examples\ExampleHashDrives.cs" />
+    <Compile Include="Examples\ExamplePhysicalDrives.cs" />
+    <Compile Include="Examples\ExampleUtilities.cs" />
+    <Compile Include="Examples\ExampleVolumes.cs" />
+    <Compile Include="Examples\ExampleWriteDrive.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -53,6 +61,7 @@
       <Name>RawDiskLib</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
