@@ -77,7 +77,8 @@ namespace RawDiskLib
                     throw new ArgumentOutOfRangeException("type");
             }
 
-            InitateDevice(path, access);
+            InitiateCommon(path, access);
+            InitateDevice();
         }
 
         public RawDisk(char driveLetter, FileAccess access = FileAccess.Read)
@@ -89,7 +90,9 @@ namespace RawDiskLib
 
             driveLetter = char.ToUpper(driveLetter);
 
-            InitateVolume(driveLetter, access);
+            string dosName = string.Format(@"\\.\{0}:", driveLetter);
+            InitiateCommon(dosName, access);
+            InitateVolume(driveLetter);
         }
 
         public RawDisk(DriveInfo drive, FileAccess access = FileAccess.Read)
@@ -101,14 +104,16 @@ namespace RawDiskLib
 
             char driveLetter = drive.Name.ToUpper()[0];
 
-            InitateVolume(driveLetter, access);
+            string dosName = string.Format(@"\\.\{0}:", driveLetter);
+            InitiateCommon(dosName, access);
+            InitateVolume(driveLetter);
         }
 
-        private void InitateDevice(string dosName, FileAccess access)
+        private void InitiateCommon(string dosName, FileAccess access)
         {
             Debug.WriteLine("Initiating with " + dosName);
 
-            _diskHandle = Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            _diskHandle = CreateDeviceHandle(dosName, access);
             DosDeviceName = dosName;
 
             if (_diskHandle.IsInvalid)
@@ -117,32 +122,23 @@ namespace RawDiskLib
             _access = access;
 
             _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = CreateDiskFileStream();
+            _diskFs = new FileStream(_diskHandle, _access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();
+        }
+
+        private void InitateDevice()
+        {
+            Debug.WriteLine("Initiating type Device");
+
             _clusterSize = _diskInfo.BytesPerSector;
             _sectorsPrCluster = _clusterSize / _diskInfo.BytesPerSector;
         }
 
-        private void InitateVolume(char driveLetter, FileAccess access)
+        private void InitateVolume(char driveLetter)
         {
-            string dosName = string.Format(@"\\.\{0}:", driveLetter);
-            Debug.WriteLine("Initiating with " + dosName);
-
-            _diskHandle = Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
-            DosDeviceName = dosName;
-
-            if (_diskHandle.IsInvalid)
-                throw new ArgumentException("Invalid diskName: " + dosName);
-
-            _access = access;
-
-            _deviceIo = new DeviceIOControlWrapper(_diskHandle);
-            _diskFs = CreateDiskFileStream();
-
-            _diskInfo = _deviceIo.DiskGetDriveGeometry();
-            _deviceLength = _deviceIo.DiskGetLengthInfo();
+            Debug.WriteLine("Initiating type Volume");
 
             uint sectorsPerCluster, bytesPerSector, numberOfFreeClusters, numberOfClusters;
             bool success = GetDiskFreeSpace(driveLetter + ":", out sectorsPerCluster, out bytesPerSector, out numberOfFreeClusters, out numberOfClusters);
@@ -230,17 +226,23 @@ namespace RawDiskLib
 
         public RawDiskStream CreateDiskStream()
         {
-            FileStream diskFs = CreateDiskFileStream();
+            SafeFileHandle diskHandle = CreateDeviceHandle(DosDeviceName, _access);
+            FileStream diskFs = new FileStream(diskHandle, _access);
 
             return new RawDiskStream(diskFs, SectorSize, SizeBytes);
         }
 
-        private FileStream CreateDiskFileStream()
+        private static SafeFileHandle CreateDeviceHandle(string dosName, FileAccess access)
         {
-            return new FileStream(_diskHandle, _access);
+            return Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
         }
 
         public void Dispose()
+        {
+            Close();
+        }
+
+        public void Close()
         {
             if (!_diskHandle.IsClosed)
                 _diskHandle.Close();
