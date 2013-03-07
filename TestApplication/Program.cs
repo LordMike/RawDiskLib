@@ -168,7 +168,9 @@ namespace TestApplication
                     {
                         RawDisk disk = new RawDisk(DiskNumberType.Volume, harddiskVolume);
 
-                        Console.WriteLine("  {0:N0}: {1:N0} Bytes", harddiskVolume, disk.SizeBytes);
+                        char[] driveLetters = DiskHelper.GetDriveLetters(disk.DosDeviceName.Remove(0, @"\\.\GLOBALROOT".Length)).Where(volumeDrives.Contains).ToArray();
+
+                        Console.WriteLine("  {0:N0}: {1:N0} Bytes, Drive Letters: {2}", harddiskVolume, disk.SizeBytes, string.Join(", ", driveLetters));
                         options.Add(harddiskVolume);
                     }
                     catch (Exception)
