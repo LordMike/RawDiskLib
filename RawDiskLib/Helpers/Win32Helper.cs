@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 
 namespace RawDiskLib.Helpers
@@ -18,62 +20,45 @@ namespace RawDiskLib.Helpers
            [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
            IntPtr hTemplateFile);
 
-        [DllImport("kernel32.dll")]
-        private static extern uint QueryDosDevice(string lpDeviceName, IntPtr lpTargetPath, uint ucchMax);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern int QueryDosDevice(string lpDeviceName, byte[] lpTargetPath, int ucchMax);
 
         public static string[] GetAllDevices()
         {
-            // Allocate some memory to get a list of all system devices.
-            // Start with a small size and dynamically give more space until we have enough room.
-            int returnSize = 0;
-            int maxSize = 100;
-            string allDevices;
-            IntPtr mem;
-            string[] retval = null;
+            int returnSize;
 
-            while (returnSize == 0)
+            byte[] bytes = new byte[16000];
+            do
             {
-                mem = Marshal.AllocHGlobal(maxSize);
-                if (mem != IntPtr.Zero)
+                returnSize = QueryDosDevice(null, bytes, bytes.Length);
+
+                if (returnSize != 0)
+                    break;
+
+                int error = Marshal.GetLastWin32Error();
+                string s = new Win32Exception(error).Message;
+
+                if (error == 122)
+                    bytes = new byte[bytes.Length * 2];
+
+            } while (true);
+
+            // Parse
+            List<string> res = new List<string>();
+            StringBuilder sb = new StringBuilder(200);
+
+            for (int i = 0; i < returnSize; i++)
+            {
+                if (bytes[i] != 0)
+                    sb.Append((char)bytes[i]);
+                else if (bytes[i] == 0 && sb.Length > 0)
                 {
-                    // mem points to memory that needs freeing
-                    try
-                    {
-                        returnSize = (int)QueryDosDevice(null, mem, (uint)maxSize);
-                        if (returnSize != 0)
-                        {
-                            allDevices = Marshal.PtrToStringAnsi(mem, returnSize);
-                            retval = allDevices.Split('\0');
-                            break;    // not really needed, but makes it more clear...
-                        }
-                        else if (Marshal.GetLastWin32Error() == 122)
-                        //maybe better
-                        //else if( Marshal.GetLastWin32Error() == ERROR_INSUFFICIENT_BUFFER)
-                        //ERROR_INSUFFICIENT_BUFFER = 122;
-                        {
-                            maxSize *= 10;
-                        }
-                        else
-                        {
-                            Marshal.ThrowExceptionForHR(Marshal.GetLastWin32Error());
-                        }
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(mem);
-                    }
-                }
-                else
-                {
-                    throw new OutOfMemoryException();
+                    res.Add(sb.ToString());
+                    sb.Clear();
                 }
             }
-            return retval;
-        }
 
-        public static string GetErrorMessage(int errorCode)
-        {
-            return new Win32Exception(errorCode).Message;
+            return res.ToArray();
         }
     }
 }

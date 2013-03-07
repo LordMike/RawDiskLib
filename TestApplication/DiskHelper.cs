@@ -30,7 +30,6 @@ namespace TestApplication
                 // Contains target?
                 string[] drives = sb.ToString().Split('\0');
 
-
                 if (drives.Any(s => s.Equals(driveName, StringComparison.InvariantCultureIgnoreCase)))
                     results.Add(ch);
             }

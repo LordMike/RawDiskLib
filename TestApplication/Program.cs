@@ -49,8 +49,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk disk = new RawDisk(device);
-                        PresentResult(disk);
+                        using (RawDisk disk = new RawDisk(device))
+                        {
+                            PresentResult(disk);
+                        }
                     }
                     catch (Win32Exception exception)
                     {
@@ -75,8 +77,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk disk = new RawDisk(DiskNumberType.PhysicalDisk, device);
-                        PresentResult(disk);
+                        using (RawDisk disk = new RawDisk(DiskNumberType.PhysicalDisk, device))
+                        {
+                            PresentResult(disk);
+                        }
                     }
                     catch (Win32Exception exception)
                     {
@@ -101,8 +105,10 @@ namespace TestApplication
 
                     try
                     {
-                        RawDisk disk = new RawDisk(DiskNumberType.Volume, device);
-                        PresentResult(disk);
+                        using (RawDisk disk = new RawDisk(DiskNumberType.Volume, device))
+                        {
+                            PresentResult(disk);
+                        }
                     }
                     catch (Win32Exception exception)
                     {
@@ -166,12 +172,13 @@ namespace TestApplication
                 {
                     try
                     {
-                        RawDisk disk = new RawDisk(DiskNumberType.Volume, harddiskVolume);
+                        using (RawDisk disk = new RawDisk(DiskNumberType.Volume, harddiskVolume))
+                        {
+                            char[] driveLetters = DiskHelper.GetDriveLetters(disk.DosDeviceName.Remove(0, @"\\.\GLOBALROOT".Length)).Where(volumeDrives.Contains).ToArray();
 
-                        char[] driveLetters = DiskHelper.GetDriveLetters(disk.DosDeviceName.Remove(0, @"\\.\GLOBALROOT".Length)).Where(volumeDrives.Contains).ToArray();
-
-                        Console.WriteLine("  {0:N0}: {1:N0} Bytes, Drive Letters: {2}", harddiskVolume, disk.SizeBytes, string.Join(", ", driveLetters));
-                        options.Add(harddiskVolume);
+                            Console.WriteLine("  {0:N0}: {1:N0} Bytes, Drive Letters: {2}", harddiskVolume, disk.SizeBytes, string.Join(", ", driveLetters));
+                            options.Add(harddiskVolume);
+                        }
                     }
                     catch (Exception)
                     {
@@ -200,79 +207,82 @@ namespace TestApplication
                 {
                     Console.WriteLine("Confirmed - starting");
 
-                    RawDisk disk = new RawDisk(DiskNumberType.Volume, selectedVol, FileAccess.ReadWrite);
-
-                    long chunks = disk.ClusterCount / ClustersToRead;
-
-                    Console.WriteLine("Disk {0} is {1:N0} Bytes large.", disk.DosDeviceName, disk.SizeBytes);
-                    Console.WriteLine("Beginning random write in {0:N0} cluster chunks of {1:N0} Bytes each", ClustersToRead, disk.ClusterSize);
-                    Console.WriteLine(" # of chunks: {0:N0}", chunks);
-
-                    byte[] chunkData = new byte[disk.ClusterSize * ClustersToRead];
-                    byte[] readData = new byte[disk.ClusterSize * ClustersToRead];
-                    Random rand = new Random();
-
-                    StringBuilder blankLineBuilder = new StringBuilder(Console.BufferWidth);
-                    for (int i = 0; i < Console.BufferWidth; i++)
-                        blankLineBuilder.Append(' ');
-                    string blankLine = blankLineBuilder.ToString();
-
-                    allSuccess = true;
-
-                    for (int chunk = 0; chunk < chunks; chunk++)
+                    using (RawDisk disk = new RawDisk(DiskNumberType.Volume, selectedVol, FileAccess.ReadWrite))
                     {
-                        rand.NextBytes(chunkData);
+                        long chunks = disk.ClusterCount / ClustersToRead;
 
-                        Console.Write("Chunk #{0}: ", chunk);
+                        Console.WriteLine("Disk {0} is {1:N0} Bytes large.", disk.DosDeviceName, disk.SizeBytes);
+                        Console.WriteLine("Beginning random write in {0:N0} cluster chunks of {1:N0} Bytes each", ClustersToRead, disk.ClusterSize);
+                        Console.WriteLine(" # of chunks: {0:N0}", chunks);
 
-                        try
+                        byte[] chunkData = new byte[disk.ClusterSize * ClustersToRead];
+                        byte[] readData = new byte[disk.ClusterSize * ClustersToRead];
+                        Random rand = new Random();
+
+                        StringBuilder blankLineBuilder = new StringBuilder(Console.BufferWidth);
+                        for (int i = 0; i < Console.BufferWidth; i++)
+                            blankLineBuilder.Append(' ');
+                        string blankLine = blankLineBuilder.ToString();
+
+                        allSuccess = true;
+
+                        for (int chunk = 0; chunk < chunks; chunk++)
                         {
-                            // Write
-                            Console.Write("Writing ... ");
+                            rand.NextBytes(chunkData);
 
-                            disk.WriteClusters(chunkData, chunk * ClustersToRead);
+                            Console.Write("Chunk #{0}: ", chunk);
 
-                            // Read
-                            Console.Write("Reading ... ");
-
-                            disk.ReadClusters(readData, 0, chunk * ClustersToRead, ClustersToRead);
-
-                            // Check
-                            if (chunkData.SequenceEqual(readData))
+                            try
                             {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine("Confirmed!");
-                                Console.ForegroundColor = _defaultColor;
+                                // Write
+                                Console.Write("Writing ... ");
+
+                                disk.WriteClusters(chunkData, chunk * ClustersToRead);
+
+                                // Read
+                                Console.Write("Reading ... ");
+
+                                disk.ReadClusters(readData, 0, chunk * ClustersToRead, ClustersToRead);
+
+                                // Check
+                                if (chunkData.SequenceEqual(readData))
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine("Confirmed!");
+                                    Console.ForegroundColor = _defaultColor;
+                                }
+                                else
+                                {
+                                    allSuccess = false;
+
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine("Failed!");
+                                    Console.ForegroundColor = _defaultColor;
+
+                                    Console.WriteLine("Presse enter to proceed.");
+                                    Console.ReadLine();
+                                }
                             }
-                            else
+                            catch (Exception ex)
                             {
                                 allSuccess = false;
 
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("Failed!");
+                                Console.WriteLine("Error: " + ex.Message);
                                 Console.ForegroundColor = _defaultColor;
 
                                 Console.WriteLine("Presse enter to proceed.");
                                 Console.ReadLine();
+
+                                Console.CursorTop--;
                             }
+
+                            Console.CursorTop--;
+                            Console.CursorLeft = 0;
+                            Console.Write(blankLine);
+                            Console.CursorTop--;
+                            Console.CursorLeft = 0;
                         }
-                        catch (Exception ex)
-                        {
-                            allSuccess = false;
-
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("Error: " + ex.Message);
-                            Console.ForegroundColor = _defaultColor;
-
-                            Console.WriteLine("Presse enter to proceed.");
-                            Console.ReadLine();
-                        }
-
-                        Console.CursorTop--;
-                        Console.CursorLeft = 0;
-                        Console.Write(blankLine);
-                        Console.CursorTop--;
-                        Console.CursorLeft = 0;
                     }
                 }
                 else
@@ -313,22 +323,23 @@ namespace TestApplication
             decimal totalSize = extents.Sum(s => (decimal)s.Size);
             decimal copiedBytes = 0;
 
-            RawDisk disk = new RawDisk(char.ToUpper(sourceFile[0]));
-
-            // Write to the source file
-            using (FileStream fs = new FileStream(dstFile, FileMode.Create))
+            using (RawDisk disk = new RawDisk(char.ToUpper(sourceFile[0])))
             {
-                // Copy all extents
-                foreach (FileExtentInfo fileExtentInfo in extents)
+                // Write to the source file
+                using (FileStream fs = new FileStream(dstFile, FileMode.Create))
                 {
-                    // Copy chunks of data
-                    for (ulong offset = 0; offset < fileExtentInfo.Size; offset += 10000)
+                    // Copy all extents
+                    foreach (FileExtentInfo fileExtentInfo in extents)
                     {
-                        int currentSizeBytes = (int)Math.Min(10000, fileExtentInfo.Size - offset);
-                        byte[] data = disk.ReadClusters((long)(fileExtentInfo.Lcn + offset), currentSizeBytes);
-                        fs.Write(data, 0, data.Length);
+                        // Copy chunks of data
+                        for (ulong offset = 0; offset < fileExtentInfo.Size; offset += 10000)
+                        {
+                            int currentSizeBytes = (int)Math.Min(10000, fileExtentInfo.Size - offset);
+                            byte[] data = disk.ReadClusters((long)(fileExtentInfo.Lcn + offset), currentSizeBytes);
+                            fs.Write(data, 0, data.Length);
 
-                        copiedBytes += currentSizeBytes;
+                            copiedBytes += currentSizeBytes;
+                        }
                     }
                 }
             }
