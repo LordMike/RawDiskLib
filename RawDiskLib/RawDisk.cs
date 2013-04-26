@@ -68,7 +68,7 @@ namespace RawDiskLib
             switch (type)
             {
                 case DiskNumberType.PhysicalDisk:
-                    path = string.Format(@"\\.\GLOBALROOT\Device\Harddisk{0}\DR{0}", number);
+                    path = string.Format(@"\\.\GLOBALROOT\Device\Harddisk{0}\Partition0", number);
                     break;
                 case DiskNumberType.Volume:
                     path = string.Format(@"\\.\GLOBALROOT\Device\HarddiskVolume{0}", number);
