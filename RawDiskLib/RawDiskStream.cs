@@ -73,22 +73,23 @@ namespace RawDiskLib
                 _diskStream.Seek(diskOffset, SeekOrigin.Begin);
 
             // Read sectors
+            int actualRead;
             if (Position % _smallestChunkSize == 0 && count % _smallestChunkSize == 0)
             {
                 // Read directly into target buffer
-                _diskStream.Read(buffer, offset, count);
+                actualRead = _diskStream.Read(buffer, offset, count);
             }
             else
             {
                 // Do a temporary buffer
                 byte[] data = new byte[(chunks + 1) * _smallestChunkSize];
-                _diskStream.Read(data, 0, data.Length);
+               actualRead= _diskStream.Read(data, 0, data.Length);
 
                 Array.Copy(data, Position % _smallestChunkSize, buffer, offset, count);
             }
 
-            Position += count;
-            return count;
+            Position += actualRead;
+            return actualRead;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
