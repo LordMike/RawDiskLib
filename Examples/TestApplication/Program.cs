@@ -1,9 +1,5 @@
 ﻿using System;
-using DeviceIOControlLib;
-using Microsoft.Win32.SafeHandles;
-using RawDiskLib.Helpers;
 using TestApplication.Examples;
-using FileAttributes = System.IO.FileAttributes;
 
 namespace TestApplication
 {
@@ -20,11 +16,11 @@ namespace TestApplication
             ExampleBase[] examples = new ExampleBase[]
                 {
                     new ExampleVolumes(),
-                    new ExampleHarddiskVolumes(), 
-                    new ExamplePhysicalDrives(), 
-                    new ExampleCopyMFT(), 
-                    new ExampleWriteDrive(), 
-                    new ExampleHashDrives(), 
+                    new ExampleHarddiskVolumes(),
+                    new ExamplePhysicalDrives(),
+                    new ExampleCopyMFT(),
+                    new ExampleWriteDrive(),
+                    new ExampleHashDrives(),
                 };
 
 

@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using DeviceIOControlLib;
+using DeviceIOControlLib.Objects.Disk;
+using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib.Helpers;
 using FileAttributes = System.IO.FileAttributes;
@@ -21,7 +23,7 @@ namespace RawDiskLib
         private FileAccess _access;
         private SafeFileHandle _diskHandle;
         private FileStream _diskFs;
-        private DeviceIOControlWrapper _deviceIo;
+        private DiskDeviceWrapper _deviceIo;
         private DISK_GEOMETRY _diskInfo;
 
         private long _deviceLength;
@@ -121,7 +123,7 @@ namespace RawDiskLib
 
             _access = access;
 
-            _deviceIo = new DeviceIOControlWrapper(_diskHandle);
+            _deviceIo = new DiskDeviceWrapper(_diskHandle);
             _diskFs = new FileStream(_diskHandle, _access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();

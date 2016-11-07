@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using DeviceIOControlLib;
+using DeviceIOControlLib.Objects.FileSystem;
+using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib;
 using RawDiskLib.Helpers;
@@ -11,7 +13,7 @@ using FileAttributes = System.IO.FileAttributes;
 
 namespace TestApplication.Examples
 {
-    static internal class ExampleUtilities
+    internal static class ExampleUtilities
     {
         public const ConsoleColor DefaultColor = ConsoleColor.Gray;
         public const long ClustersToRead = 100;
@@ -69,13 +71,13 @@ namespace TestApplication.Examples
                 throw new ArgumentException("Invalid file: " + sourceFile);
 
             //var driveWrapper = new DeviceIOControlWrapper(driveHandle);
-            DeviceIOControlWrapper fileWrapper = new DeviceIOControlWrapper(fileHandle);
+            FilesystemDeviceWrapper fileWrapper = new FilesystemDeviceWrapper(fileHandle);
 
             FileExtentInfo[] extents = fileWrapper.FileSystemGetRetrievalPointers();
             decimal totalSize = extents.Sum(s => (decimal)s.Size);
             decimal copiedBytes = 0;
 
-            using (RawDisk disk = new RawDisk(Char.ToUpper(sourceFile[0])))
+            using (RawDisk disk = new RawDisk(char.ToUpper(sourceFile[0])))
             {
                 // Write to the source file
                 using (FileStream fs = new FileStream(dstFile, FileMode.Create))
