@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using RawDiskLib;
@@ -17,7 +18,7 @@ namespace TestApplication.Examples
             // 512 MB
             const long lengthTodo = 512L * 1024 * 1024;
 
-            char[] volumeDrives = Utils.GetAllAvailableVolumes();
+            IEnumerable<char> volumeDrives = Utils.GetAllAvailableVolumes();
 
             foreach (char drive in volumeDrives)
             {

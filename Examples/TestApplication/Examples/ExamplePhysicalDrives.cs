@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using RawDiskLib;
 
@@ -13,7 +14,7 @@ namespace TestApplication.Examples
 
         public override void Execute()
         {
-            int[] physicalDrives = Utils.GetAllAvailableDrives(DiskNumberType.PhysicalDisk);
+            IEnumerable<int> physicalDrives = Utils.GetAllAvailableDrives(DiskNumberType.PhysicalDisk);
 
             foreach (int device in physicalDrives)
             {

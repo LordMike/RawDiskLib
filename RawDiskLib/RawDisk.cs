@@ -55,7 +55,7 @@ namespace RawDiskLib
         {
             if (number < 0)
                 throw new ArgumentException("Invalid number");
-            if (!access.HasFlag(FileAccess.Read))
+            if ((access & FileAccess.Read) == 0)
                 throw new ArgumentException("Access must include read");
 
             string path;
@@ -68,7 +68,7 @@ namespace RawDiskLib
                     path = string.Format(@"\\.\GLOBALROOT\Device\HarddiskVolume{0}", number);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("type");
+                    throw new ArgumentOutOfRangeException(nameof(type));
             }
 
             InitiateCommon(path, access);
@@ -79,7 +79,7 @@ namespace RawDiskLib
         {
             if (!char.IsLetter(driveLetter))
                 throw new ArgumentException("Invalid drive letter");
-            if (!access.HasFlag(FileAccess.Read))
+            if ((access & FileAccess.Read) == 0)
                 throw new ArgumentException("Access must include read");
 
             driveLetter = char.ToUpper(driveLetter);
@@ -92,8 +92,8 @@ namespace RawDiskLib
         public RawDisk(DriveInfo drive, FileAccess access = FileAccess.Read)
         {
             if (drive == null)
-                throw new ArgumentNullException("drive");
-            if (!access.HasFlag(FileAccess.Read))
+                throw new ArgumentNullException(nameof(drive));
+            if ((access & FileAccess.Read) == 0)
                 throw new ArgumentException("Access must include read");
 
             char driveLetter = drive.Name.ToUpper()[0];
@@ -181,7 +181,7 @@ namespace RawDiskLib
             if (buffer.Length - bufferOffset < clusters * ClusterSize)
                 throw new ArgumentException("Buffer not large enough");
             if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
-                throw new ArgumentOutOfRangeException("bufferOffset");
+                throw new ArgumentOutOfRangeException(nameof(bufferOffset));
 
             return ReadSectors(buffer, bufferOffset, cluster * _sectorsPrCluster, clusters * _sectorsPrCluster);
         }
@@ -203,7 +203,7 @@ namespace RawDiskLib
             if (buffer.Length - bufferOffset < sectors * SectorSize)
                 throw new ArgumentException("Buffer not large enough");
             if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
-                throw new ArgumentOutOfRangeException("bufferOffset");
+                throw new ArgumentOutOfRangeException(nameof(bufferOffset));
 
             long offsetBytes = sector * SectorSize;
 

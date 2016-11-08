@@ -36,6 +36,16 @@
       },
       "imports": "dnxcore50"
     },
+    "net20": {
+      "buildOptions": {
+        "define": [ "NET20" ]
+      }
+    },
+    "net35": {
+      "buildOptions": {
+        "define": [ "NET35" ]
+      }
+    },
     "net40": {}
   }
 }

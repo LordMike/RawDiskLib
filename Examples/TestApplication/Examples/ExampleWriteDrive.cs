@@ -16,8 +16,8 @@ namespace TestApplication.Examples
 
         public override void Execute()
         {
-            char[] volumeDrives = Utils.GetAllAvailableVolumes();
-            int[] harddiskVolumes = Utils.GetAllAvailableDrives(DiskNumberType.Volume);
+            IEnumerable<char> volumeDrives = Utils.GetAllAvailableVolumes();
+            IEnumerable<int> harddiskVolumes = Utils.GetAllAvailableDrives(DiskNumberType.Volume);
 
             Console.WriteLine("You need to enter a volume on which to write and read. Note that this volume will be useless afterwards - do not chose anything by test volumes!");
             Console.WriteLine("Select volume:");
@@ -97,7 +97,7 @@ namespace TestApplication.Examples
                             // Read
                             Console.Write("Reading ... ");
 
-                            disk.ReadClusters(readData, 0, chunk * ExampleUtilities.ClustersToRead, (int) ExampleUtilities.ClustersToRead);
+                            disk.ReadClusters(readData, 0, chunk * ExampleUtilities.ClustersToRead, (int)ExampleUtilities.ClustersToRead);
 
                             // Check
                             if (chunkData.SequenceEqual(readData))

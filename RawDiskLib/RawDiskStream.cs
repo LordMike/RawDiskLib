@@ -37,7 +37,7 @@ namespace RawDiskLib
                     newPosition = Length - offset;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("origin");
+                    throw new ArgumentOutOfRangeException(nameof(origin));
             }
 
             // Is it valid?
