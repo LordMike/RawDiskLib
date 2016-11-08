@@ -5,7 +5,7 @@
   },
 
   "dependencies": {
-    "RawDiskLib": "1.0.0-*"
+    "RawDiskLib": "0.1.0"
     //"Microsoft.NETCore.App": {
     //  "type": "platform",
     //  "version": "1.0.1"
