@@ -1,6 +1,26 @@
 ﻿{
   "version": "1.0.0-*",
 
+  "title": "RawDiskLib",
+  "description": "Library to interact with Windows' DeviceIoControl method",
+  "authors": [ "LordMike" ],
+
+  "packOptions": {
+    "owners": [ "LordMike" ],
+    "tags": [ "Raw Disk", "Disk" ],
+    "projectUrl": "https://github.com/lordmike/rawdisklib",
+    "licenseUrl": "https://github.com/lordmike/rawdisklib/blob/master/LICENSE.txt",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/lordmike/rawdisklib"
+    }
+  },
+
+  "buildOptions": {
+    "publicSign": true,
+    "keyFile": "../SigningKey.snk"
+  },
+
   "dependencies": {
     //"NETStandard.Library": "1.6.0",
     "DeviceIOControlLib": "0.1.0-alpha"
