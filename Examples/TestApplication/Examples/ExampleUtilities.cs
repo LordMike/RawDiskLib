@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using DeviceIOControlLib;
 using DeviceIOControlLib.Objects.FileSystem;
 using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using DeviceIOControlLib;
 using DeviceIOControlLib.Objects.Disk;
 using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;
