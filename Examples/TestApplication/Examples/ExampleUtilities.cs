@@ -7,7 +7,6 @@ using DeviceIOControlLib.Objects.FileSystem;
 using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib;
-using RawDiskLib.Helpers;
 using TestApplication.Utilities;
 using FileAttributes = System.IO.FileAttributes;
 

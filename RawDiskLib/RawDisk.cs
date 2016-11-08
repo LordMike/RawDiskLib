@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using DeviceIOControlLib.Objects.Disk;
 using DeviceIOControlLib.Wrapper;
 using Microsoft.Win32.SafeHandles;
 using RawDiskLib.Helpers;
-using FileAttributes = System.IO.FileAttributes;
 
 namespace RawDiskLib
 {
