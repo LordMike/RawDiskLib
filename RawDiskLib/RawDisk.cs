@@ -149,7 +149,7 @@ namespace RawDiskLib
             if (data.Length % ClusterSize != 0)
                 throw new ArgumentException("Data length");
             if (cluster < 0 || cluster + clusters > ClusterCount)
-                throw new ArgumentException("Out of bounds");
+                throw new ArgumentException("Out of bounds", nameof(cluster));
 
             long offsetBytes = cluster * ClusterSize;
 
@@ -172,12 +172,12 @@ namespace RawDiskLib
 
         public int ReadClusters(byte[] buffer, int bufferOffset, long cluster, int clusters)
         {
-            if (clusters < 1)
-                throw new ArgumentException("clusters");
+            if (clusters <= 0)
+                throw new ArgumentException("Clusters must be larger than 0", nameof(clusters));
             if (cluster < 0 || cluster + clusters > ClusterCount)
-                throw new ArgumentException("Out of bounds");
+                throw new ArgumentException("Out of bounds", nameof(cluster));
             if (buffer.Length - bufferOffset < clusters * ClusterSize)
-                throw new ArgumentException("Buffer not large enough");
+                throw new ArgumentException("Buffer not large enough", nameof(buffer));
             if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
                 throw new ArgumentOutOfRangeException(nameof(bufferOffset));
 
@@ -194,12 +194,12 @@ namespace RawDiskLib
 
         public int ReadSectors(byte[] buffer, int bufferOffset, long sector, int sectors)
         {
-            if (sectors < 1)
-                throw new ArgumentException("sectors");
+            if (sectors <= 0)
+                throw new ArgumentException("Sectors must be larger than 0", nameof(sectors));
             if (sector < 0 || sector + sectors > SectorCount)
-                throw new ArgumentException("Out of bounds");
+                throw new ArgumentException("Out of bounds", nameof(sector));
             if (buffer.Length - bufferOffset < sectors * SectorSize)
-                throw new ArgumentException("Buffer not large enough");
+                throw new ArgumentException("Buffer not large enough", nameof(buffer));
             if (!(0 <= bufferOffset && bufferOffset <= buffer.Length))
                 throw new ArgumentOutOfRangeException(nameof(bufferOffset));
 
@@ -234,11 +234,6 @@ namespace RawDiskLib
                 _diskHandle.Close();
 #endif
             }
-        }
-
-        public void Close()
-        {
-            Dispose();
         }
     }
 
