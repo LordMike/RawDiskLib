@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "0.1.0",
 
   "title": "RawDiskLib",
@@ -7,7 +7,7 @@
 
   "packOptions": {
     "owners": [ "LordMike" ],
-    "tags": [ "Raw Disk", "Disk" ],
+    "tags": [ "Raw disk", "Disk" ],
     "projectUrl": "https://github.com/lordmike/rawdisklib",
     "licenseUrl": "https://github.com/lordmike/rawdisklib/blob/master/LICENSE.txt",
     "repository": {
@@ -31,8 +31,8 @@
         "define": [ "NETCORE" ]
       },
       "dependencies": {
-        "NETStandard.Library": "1.6.0",
-        "System.IO.FileSystem.DriveInfo": "4.0.0"
+        "System.IO.FileSystem.DriveInfo": "4.0.0",
+        "System.Text.RegularExpressions": "4.1.0"
       },
       "imports": "dnxcore50"
     },
