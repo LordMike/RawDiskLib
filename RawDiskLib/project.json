@@ -1,8 +1,8 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
 
   "title": "RawDiskLib",
-  "description": "Library to interact with Windows' DeviceIoControl method",
+  "description": "Library to read and write to raw disks in Windows",
   "authors": [ "LordMike" ],
 
   "packOptions": {
