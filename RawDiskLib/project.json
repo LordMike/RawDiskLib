@@ -22,14 +22,20 @@
   },
 
   "dependencies": {
-    //"NETStandard.Library": "1.6.0",
     "DeviceIOControlLib": "0.1.0-alpha"
   },
 
   "frameworks": {
-    //"netstandard1.6": {
-    //  "imports": "dnxcore50"
-    //}
+    "netstandard1.6": {
+      "buildOptions": {
+        "define": [ "NETCORE" ]
+      },
+      "dependencies": {
+        "NETStandard.Library": "1.6.0",
+        "System.IO.FileSystem.DriveInfo": "4.0.0"
+      },
+      "imports": "dnxcore50"
+    },
     "net40": {}
   }
 }

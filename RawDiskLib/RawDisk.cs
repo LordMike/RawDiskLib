@@ -12,13 +12,6 @@ namespace RawDiskLib
 {
     public class RawDisk : IDisposable
     {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool GetDiskFreeSpace(string lpRootPathName,
-           out uint lpSectorsPerCluster,
-           out uint lpBytesPerSector,
-           out uint lpNumberOfFreeClusters,
-           out uint lpTotalNumberOfClusters);
-
         private FileAccess _access;
         private SafeFileHandle _diskHandle;
         private FileStream _diskFs;
@@ -114,7 +107,7 @@ namespace RawDiskLib
         {
             Debug.WriteLine("Initiating with " + dosName);
 
-            _diskHandle = CreateDeviceHandle(dosName, access);
+            _diskHandle = PlatformShim.CreateDeviceHandle(dosName, access);
             DosDeviceName = dosName;
 
             if (_diskHandle.IsInvalid)
@@ -142,7 +135,7 @@ namespace RawDiskLib
             Debug.WriteLine("Initiating type Volume");
 
             uint sectorsPerCluster, bytesPerSector, numberOfFreeClusters, numberOfClusters;
-            bool success = GetDiskFreeSpace(driveLetter + ":", out sectorsPerCluster, out bytesPerSector, out numberOfFreeClusters, out numberOfClusters);
+            bool success = PlatformShim.GetDiskFreeSpace(driveLetter + ":", out sectorsPerCluster, out bytesPerSector, out numberOfFreeClusters, out numberOfClusters);
 
             if (success)
             {
@@ -227,26 +220,27 @@ namespace RawDiskLib
 
         public RawDiskStream CreateDiskStream()
         {
-            SafeFileHandle diskHandle = CreateDeviceHandle(DosDeviceName, _access);
+            SafeFileHandle diskHandle = PlatformShim.CreateDeviceHandle(DosDeviceName, _access);
             FileStream diskFs = new FileStream(diskHandle, _access);
 
             return new RawDiskStream(diskFs, SectorSize, SizeBytes);
         }
 
-        private static SafeFileHandle CreateDeviceHandle(string dosName, FileAccess access)
-        {
-            return Win32Helper.CreateFile(dosName, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
-        }
-
         public void Dispose()
         {
-            Close();
+            if (!_diskHandle.IsClosed)
+            {
+#if NETCORE
+                _diskHandle.Dispose();
+#else
+                _diskHandle.Close();
+#endif
+            }
         }
 
         public void Close()
         {
-            if (!_diskHandle.IsClosed)
-                _diskHandle.Close();
+            Dispose();
         }
     }
 

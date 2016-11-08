@@ -85,7 +85,7 @@ namespace RawDiskLib
                 byte[] data = new byte[(chunks + 1) * _smallestChunkSize];
                actualRead= _diskStream.Read(data, 0, data.Length);
 
-                Array.Copy(data, Position % _smallestChunkSize, buffer, offset, count);
+                Array.Copy(data, (int) (Position % _smallestChunkSize), buffer, offset, count);
             }
 
             Position += actualRead;

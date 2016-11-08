@@ -1,25 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 
 namespace RawDiskLib.Helpers
 {
-    public static class Win32Helper
+    internal static class Win32Helper
     {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern SafeFileHandle CreateFile(
-           string lpFileName,
-           [MarshalAs(UnmanagedType.U4)] FileAccess dwDesiredAccess,
-           [MarshalAs(UnmanagedType.U4)] FileShare dwShareMode,
-           IntPtr lpSecurityAttributes,
-           [MarshalAs(UnmanagedType.U4)] FileMode dwCreationDisposition,
-           [MarshalAs(UnmanagedType.U4)] FileAttributes dwFlagsAndAttributes,
-           IntPtr hTemplateFile);
-
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern int QueryDosDevice(string lpDeviceName, byte[] lpTargetPath, int ucchMax);
 
