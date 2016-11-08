@@ -60,10 +60,10 @@ namespace RawDiskLib
             switch (type)
             {
                 case DiskNumberType.PhysicalDisk:
-                    path = string.Format(@"\\.\GLOBALROOT\Device\Harddisk{0}\Partition0", number);
+                    path = $@"\\.\GLOBALROOT\Device\Harddisk{number}\Partition0";
                     break;
                 case DiskNumberType.Volume:
-                    path = string.Format(@"\\.\GLOBALROOT\Device\HarddiskVolume{0}", number);
+                    path = $@"\\.\GLOBALROOT\Device\HarddiskVolume{number}";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type));
@@ -82,7 +82,7 @@ namespace RawDiskLib
 
             driveLetter = char.ToUpper(driveLetter);
 
-            string dosName = string.Format(@"\\.\{0}:", driveLetter);
+            string dosName = $@"\\.\{driveLetter}:";
             InitiateCommon(dosName, access);
             InitateVolume(driveLetter);
         }
@@ -96,7 +96,7 @@ namespace RawDiskLib
 
             char driveLetter = drive.Name.ToUpper()[0];
 
-            string dosName = string.Format(@"\\.\{0}:", driveLetter);
+            string dosName = $@"\\.\{driveLetter}:";
             InitiateCommon(dosName, access);
             InitateVolume(driveLetter);
         }
