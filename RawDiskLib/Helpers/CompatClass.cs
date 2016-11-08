@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿#if NET20 || NET35
+using System.Text;
 
-#if NET20 || NET35
 namespace RawDiskLib.Helpers
 {
     internal static class CompatClass
