@@ -1,5 +1,5 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2",
 
   "title": "RawDiskLib",
   "description": "Library to read and write to raw disks in Windows",
