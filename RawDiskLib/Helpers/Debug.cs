@@ -2,7 +2,7 @@
 // ReSharper disable once CheckNamespace
 namespace System.Diagnostics
 {
-    public static class Debug
+    internal static class Debug
     {
         public static void WriteLine(string message)
         {
