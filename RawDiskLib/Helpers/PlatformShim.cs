@@ -26,11 +26,7 @@ namespace RawDiskLib.Helpers
 
         public static SafeFileHandle CreateDeviceHandle(string path, FileAccess access)
         {
-#if NETCORE
-            return File.Open(path, FileMode.Open, access, FileShare.ReadWrite).SafeFileHandle;
-#else
             return CreateFile(path, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
-#endif
         }
     }
 }
