@@ -6,10 +6,6 @@ namespace TestApplication
     public class Program
     {
         public const uint FILE_READ_ATTRIBUTES = (0x0080);
-        public const uint FILE_WRITE_ATTRIBUTES = 0x0100;
-
-        private static ConsoleColor _defaultColor;
-        const int ClustersToRead = 100;
 
         static void Main(string[] args)
         {
