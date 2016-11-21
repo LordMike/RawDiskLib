@@ -1,15 +1,18 @@
-version: 0.1.3.{build}
 build_script:
-- cmd: >-
-    REM Core
+- ps: >-
+    $version = (Get-Content .\RawDiskLib\project.json | ConvertFrom-Json).version
+
+    Update-AppveyorBuild -Version "$version.$env:APPVEYOR_BUILD_NUMBER"
+- ps: >-
+    # Core
 
     dotnet restore
+- ps: >-
+    # Library
 
     dotnet pack -c Release -o Nuget\ RawDiskLib
-
-
-
-    REM Utilities
+- ps: >-
+    # Utilities
 
     dotnet build -c Release Examples\TestApplication
 artifacts:
