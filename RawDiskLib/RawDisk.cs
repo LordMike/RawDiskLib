@@ -11,7 +11,6 @@ namespace RawDiskLib
     public class RawDisk : IDisposable
     {
         private FileAccess _access;
-        private SafeFileHandle _diskHandle;
         private FileStream _diskFs;
         private DiskDeviceWrapper _deviceIo;
         private DISK_GEOMETRY _diskInfo;
@@ -48,6 +47,12 @@ namespace RawDiskLib
         {
             get { return _diskInfo; }
         }
+
+        /// <summary>
+        /// The actual handle behind the scenes. Used for other Win32 calls.
+        /// Do not close this.
+        /// </summary>
+        public SafeFileHandle DiskHandle { get; private set; }
 
         public RawDisk(DiskNumberType type, int number, FileAccess access = FileAccess.Read)
         {
@@ -105,10 +110,10 @@ namespace RawDiskLib
         {
             Debug.WriteLine("Initiating with " + dosName);
 
-            _diskHandle = PlatformShim.CreateDeviceHandle(dosName, access);
+            DiskHandle = PlatformShim.CreateDeviceHandle(dosName, access);
             DosDeviceName = dosName;
 
-            if (_diskHandle.IsInvalid)
+            if (DiskHandle.IsInvalid)
                 throw new ArgumentException("Invalid diskName: " + dosName);
 
             _access = access;
@@ -226,12 +231,12 @@ namespace RawDiskLib
 
         public void Dispose()
         {
-            if (!_diskHandle.IsClosed)
+            if (!DiskHandle.IsClosed)
             {
 #if NETCORE
-                _diskHandle.Dispose();
+                DiskHandle.Dispose();
 #else
-                _diskHandle.Close();
+                DiskHandle.Close();
 #endif
             }
         }
