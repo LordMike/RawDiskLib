@@ -19,34 +19,19 @@ namespace RawDiskLib
         private int _clusterSize;
         private int _sectorsPrCluster;
 
-        public long SizeBytes
-        {
-            get { return _deviceLength; }
-        }
-        public long ClusterCount
-        {
-            get { return _deviceLength / _clusterSize; }
-        }
-        public int ClusterSize
-        {
-            get { return _clusterSize; }
-        }
+        public long SizeBytes => _deviceLength;
 
-        public long SectorCount
-        {
-            get { return _deviceLength / _diskInfo.BytesPerSector; }
-        }
-        public int SectorSize
-        {
-            get { return _diskInfo.BytesPerSector; }
-        }
+        public long ClusterCount => _deviceLength / _clusterSize;
+
+        public int ClusterSize => _clusterSize;
+
+        public long SectorCount => _deviceLength / _diskInfo.BytesPerSector;
+
+        public int SectorSize => _diskInfo.BytesPerSector;
 
         public string DosDeviceName { get; private set; }
 
-        public DISK_GEOMETRY DiskInfo
-        {
-            get { return _diskInfo; }
-        }
+        public DISK_GEOMETRY DiskInfo => _diskInfo;
 
         /// <summary>
         /// The actual handle behind the scenes. Used for other Win32 calls.
@@ -118,8 +103,8 @@ namespace RawDiskLib
 
             _access = access;
 
-            _deviceIo = new DiskDeviceWrapper(_diskHandle);
-            _diskFs = new FileStream(_diskHandle, _access);
+            _deviceIo = new DiskDeviceWrapper(DiskHandle);
+            _diskFs = new FileStream(DiskHandle, _access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
             _deviceLength = _deviceIo.DiskGetLengthInfo();

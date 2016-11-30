@@ -159,25 +159,13 @@ namespace RawDiskLib
             Position += count;
         }
 
-        public override bool CanRead
-        {
-            get { return _diskStream.CanRead; }
-        }
+        public override bool CanRead => _diskStream.CanRead;
 
-        public override bool CanSeek
-        {
-            get { return _diskStream.CanSeek; }
-        }
+        public override bool CanSeek => _diskStream.CanSeek;
 
-        public override bool CanWrite
-        {
-            get { return _diskStream.CanWrite; }
-        }
+        public override bool CanWrite => _diskStream.CanWrite;
 
-        public override long Length
-        {
-            get { return _length; }
-        }
+        public override long Length => _length;
 
         public override long Position { get; set; }
     }
