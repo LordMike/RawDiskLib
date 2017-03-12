@@ -3,9 +3,9 @@ build_script:
 - ps: >-
     [xml]$doc = (Get-Content .\RawDiskLib\RawDiskLib.csproj)
 
-    $version = $doc.Project.PropertyGroup.VersionPrefix
+    [string]$version = $doc.Project.PropertyGroup.VersionPrefix
     
-    Update-AppveyorBuild -Version "$version.$env:APPVEYOR_BUILD_NUMBER"
+    Update-AppveyorBuild -Version "$($version.Trim()).$env:APPVEYOR_BUILD_NUMBER"
 - ps: # Library
 - ps: msbuild /t:Build /p:Configuration=Release RawDiskLib
 - ps: # Pack Library
