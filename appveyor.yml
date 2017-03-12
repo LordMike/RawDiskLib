@@ -1,20 +1,19 @@
+image: Visual Studio 2017
 build_script:
 - ps: >-
-    $version = (Get-Content .\RawDiskLib\project.json | ConvertFrom-Json).version
+    [xml]$doc = (Get-Content .\RawDiskLib\RawDiskLib.csproj)
 
+    $version = $doc.Project.PropertyGroup.VersionPrefix
+    
     Update-AppveyorBuild -Version "$version.$env:APPVEYOR_BUILD_NUMBER"
-- ps: >-
-    # Core
-
-    dotnet restore
-- ps: >-
-    # Library
-
-    dotnet pack -c Release -o Nuget\ RawDiskLib
-- ps: >-
-    # Utilities
-
-    dotnet build -c Release Examples\TestApplication
+- ps: # Library
+- ps: msbuild /t:Build /p:Configuration=Release RawDiskLib
+- ps: # Pack Library
+- ps: msbuild /t:Pack /p:Configuration=Release /p:OutputPath=..\Nuget\ RawDiskLib
+- ps: # Library
+- ps: msbuild /t:Build /p:Configuration=Release Examples\TestApplication
+install:
+- msbuild /t:Restore
 artifacts:
 - path: Nuget\*.nupkg
 deploy:
