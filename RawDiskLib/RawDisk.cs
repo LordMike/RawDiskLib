@@ -39,6 +39,17 @@ namespace RawDiskLib
         /// </summary>
         public SafeFileHandle DiskHandle { get; private set; }
 
+        public RawDisk(string devicePath, FileAccess access = FileAccess.Read)
+        {
+            if (string.IsNullOrEmpty(devicePath) )
+                throw new ArgumentException("DevicePath must be valid", nameof(devicePath));
+            if ((access & FileAccess.Read) == 0)
+                throw new ArgumentException("Access must include read");
+
+            InitiateCommon(devicePath, access);
+            InitateDevice();
+        }
+
         public RawDisk(DiskNumberType type, int number, FileAccess access = FileAccess.Read)
         {
             if (number < 0)
