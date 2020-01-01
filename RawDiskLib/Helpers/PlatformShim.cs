@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
@@ -26,7 +27,13 @@ namespace RawDiskLib.Helpers
 
         public static SafeFileHandle CreateDeviceHandle(string path, FileAccess access)
         {
-            return CreateFile(path, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+            SafeFileHandle handle = CreateFile(path, access, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
+
+            int win32Error = Marshal.GetLastWin32Error();
+            if (win32Error != 0)
+                throw new Win32Exception(win32Error);
+
+            return handle;
         }
     }
 }
