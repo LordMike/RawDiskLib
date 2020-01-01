@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -7,6 +7,9 @@ namespace RawDiskLib.Helpers
 {
     internal static class Win32Helper
     {
+        private const int ERROR_INSUFFICIENT_BUFFER = 122;
+        private const int ERROR_SUCCSS = 0;
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern int QueryDosDevice(string lpDeviceName, byte[] lpTargetPath, int ucchMax);
 
@@ -18,19 +21,18 @@ namespace RawDiskLib.Helpers
             do
             {
                 returnSize = QueryDosDevice(null, bytes, bytes.Length);
+                int error = Marshal.GetLastWin32Error();
 
-                if (returnSize != 0)
+                if (error == ERROR_SUCCSS)
                     break;
 
-                int error = Marshal.GetLastWin32Error();
-                string s = new Win32Exception(error).Message;
+                if (error != ERROR_INSUFFICIENT_BUFFER)
+                    throw new Exception("Unable to query DOS devices");
 
-                if (error == 122)
-                    bytes = new byte[bytes.Length * 2];
-
+                bytes = new byte[bytes.Length * 2];
             } while (true);
 
-            // Parse
+            // Parse as list of null-seperated ANSI strings
             List<string> res = new List<string>();
             StringBuilder sb = new StringBuilder(200);
 
