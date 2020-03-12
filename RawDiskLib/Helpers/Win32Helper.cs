@@ -23,7 +23,7 @@ namespace RawDiskLib.Helpers
                 returnSize = QueryDosDevice(null, bytes, bytes.Length);
                 int error = Marshal.GetLastWin32Error();
 
-                if (error == ERROR_SUCCSS)
+                if (returnSize > 0 || error == ERROR_SUCCSS)
                     break;
 
                 if (error != ERROR_INSUFFICIENT_BUFFER)
