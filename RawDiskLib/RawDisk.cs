@@ -14,18 +14,15 @@ namespace RawDiskLib
         private FileStream _diskFs;
         private DiskDeviceWrapper _deviceIo;
         private DISK_GEOMETRY _diskInfo;
-
-        private long _deviceLength;
-        private int _clusterSize;
         private int _sectorsPrCluster;
 
-        public long SizeBytes => _deviceLength;
+        public long SizeBytes { get; private set; }
 
-        public long ClusterCount => _deviceLength / _clusterSize;
+        public long ClusterCount => SizeBytes / ClusterSize;
 
-        public int ClusterSize => _clusterSize;
+        public int ClusterSize { get; private set; }
 
-        public long SectorCount => _deviceLength / _diskInfo.BytesPerSector;
+        public long SectorCount => SizeBytes / _diskInfo.BytesPerSector;
 
         public int SectorSize => _diskInfo.BytesPerSector;
 
@@ -118,15 +115,15 @@ namespace RawDiskLib
             _diskFs = new FileStream(DiskHandle, _access);
 
             _diskInfo = _deviceIo.DiskGetDriveGeometry();
-            _deviceLength = _deviceIo.DiskGetLengthInfo();
+            SizeBytes = _deviceIo.DiskGetLengthInfo();
         }
 
         private void InitateDevice()
         {
             Debug.WriteLine("Initiating type Device");
 
-            _clusterSize = _diskInfo.BytesPerSector;
-            _sectorsPrCluster = _clusterSize / _diskInfo.BytesPerSector;
+            ClusterSize = _diskInfo.BytesPerSector;
+            _sectorsPrCluster = ClusterSize / _diskInfo.BytesPerSector;
         }
 
         private void InitateVolume(char driveLetter)
@@ -138,7 +135,7 @@ namespace RawDiskLib
 
             if (success)
             {
-                _clusterSize = (int)(bytesPerSector * sectorsPerCluster);
+                ClusterSize = (int)(bytesPerSector * sectorsPerCluster);
                 _sectorsPrCluster = (int)sectorsPerCluster;
             }
         }
@@ -236,11 +233,5 @@ namespace RawDiskLib
 #endif
             }
         }
-    }
-
-    public enum DiskNumberType
-    {
-        PhysicalDisk,
-        Volume,
     }
 }

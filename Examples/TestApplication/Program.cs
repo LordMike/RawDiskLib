@@ -9,8 +9,7 @@ namespace TestApplication
 
         static void Main(string[] args)
         {
-            ExampleBase[] examples = new ExampleBase[]
-                {
+            ExampleBase[] examples = {
                     new ExampleVolumes(),
                     new ExampleHarddiskVolumes(),
                     new ExamplePhysicalDrives(),
@@ -18,7 +17,6 @@ namespace TestApplication
                     new ExampleWriteDrive(),
                     new ExampleHashDrives(),
                 };
-
 
             for (int index = 0; index < examples.Length; index++)
             {
