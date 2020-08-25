@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>Library to read and write to raw disks in Windows</Description>
     <AssemblyTitle>RawDiskLib</AssemblyTitle>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.2.1</VersionPrefix>
     <Authors>LordMike</Authors>
     <TargetFrameworks>netstandard1.3;net20;net35;net40</TargetFrameworks>
     <PublicSign>true</PublicSign>
