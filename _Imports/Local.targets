@@ -1,0 +1,14 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Package -->
+  <PropertyGroup>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/LordMike/RawDiskLib</PackageProjectUrl>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/LordMike/RawDiskLib</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+  
+</Project>
