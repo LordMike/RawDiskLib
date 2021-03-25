@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31105.61
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RawDiskLib", "RawDiskLib\RawDiskLib.csproj", "{C2D3D361-FD53-4928-8467-72AAD5C63D24}"
 EndProject
@@ -11,7 +11,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D10F43F9-0CDD-4918-8FC8-8FCAF2DE31B3}"
 	ProjectSection(SolutionItems) = preProject
 		appveyor.yml = appveyor.yml
+		Directory.Build.props = Directory.Build.props
 		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Imports", "_Imports", "{85DFF48C-8580-486C-9ADF-47946BFBD1E1}"
+	ProjectSection(SolutionItems) = preProject
+		_Imports\Local.targets = _Imports\Local.targets
+		_Imports\Test.targets = _Imports\Test.targets
 	EndProjectSection
 EndProject
 Global
@@ -54,5 +61,9 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{0D4905FB-6E29-4ADF-90B7-C560B962F3F0} = {C5A63324-038D-442A-A4E3-A73260C5A19C}
+		{85DFF48C-8580-486C-9ADF-47946BFBD1E1} = {D10F43F9-0CDD-4918-8FC8-8FCAF2DE31B3}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {10FC3F59-4D76-411E-B2E8-89A0D096B85F}
 	EndGlobalSection
 EndGlobal

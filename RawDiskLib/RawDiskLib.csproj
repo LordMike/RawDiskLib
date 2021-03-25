@@ -1,25 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Library to read and write to raw disks in Windows</Description>
-    <AssemblyTitle>RawDiskLib</AssemblyTitle>
-    <VersionPrefix>0.2.1</VersionPrefix>
-    <Authors>LordMike</Authors>
-    <TargetFrameworks>netstandard1.3;net20;net35;net40</TargetFrameworks>
-    <PublicSign>true</PublicSign>
-    <AssemblyName>RawDiskLib</AssemblyName>
-    <AssemblyOriginatorKeyFile>../SigningKey.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PackageId>RawDiskLib</PackageId>
-    <PackageTags>Raw disk;Disk</PackageTags>
-    <PackageProjectUrl>https://github.com/lordmike/rawdisklib</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/lordmike/rawdisklib/blob/master/LICENSE.txt</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/lordmike/rawdisklib</RepositoryUrl>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.3' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <TargetFrameworks>netstandard1.3;netstandard2.0</TargetFrameworks>
+    <Description>Library to read and write to raw disks in Windows, something that can be tricky from time to time</Description>
+    <PackageTags>Raw-disk;Disk</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,31 +13,6 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
     <PackageReference Include="System.IO.FileSystem.DriveInfo" Version="4.3.0" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net20' ">
-    <Reference Include="System" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net35' ">
-    <Reference Include="System" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <DefineConstants>$(DefineConstants);NETCORE</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net20' ">
-    <DefineConstants>$(DefineConstants);NET20</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net35' ">
-    <DefineConstants>$(DefineConstants);NET35</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>

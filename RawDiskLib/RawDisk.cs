@@ -225,13 +225,7 @@ namespace RawDiskLib
         public void Dispose()
         {
             if (!DiskHandle.IsClosed)
-            {
-#if NETCORE
                 DiskHandle.Dispose();
-#else
-                DiskHandle.Close();
-#endif
-            }
         }
     }
 }
