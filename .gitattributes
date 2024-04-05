@@ -1,0 +1,47 @@
+# Linux scripts
+*.sh		    text diff=bash eol=lf encoding=utf-8
+
+# Windows scripts
+*.bat           text eol=crlf encoding=utf-8
+*.ps1           text eol=crlf encoding=utf-8
+
+# Config files
+*.conf		    text eol=lf encoding=utf-8
+
+# Source code files
+*.cs            text diff=csharp eol=lf encoding=utf-8
+*.py            text diff=python eol=lf encoding=utf-8
+*.cshtml        text diff=html eol=lf encoding=utf-8
+*.html		    text diff=html eol=lf encoding=utf-8
+*.json		    text eol=lf encoding=utf-8
+*.css		    text diff=css eol=lf encoding=utf-8
+*.scss		    text diff=css eol=lf encoding=utf-8
+*.js		    text eol=lf encoding=utf-8
+
+# Text files
+*.txt		    text eol=lf encoding=utf-8
+*.md            text diff=markdown eol=lf encoding=utf-8
+
+# XML files
+*.DotSettings   text eol=lf encoding=utf-8
+*.xml		    text eol=lf encoding=utf-8
+*.targets	    text eol=lf encoding=utf-8
+*.props		    text eol=lf encoding=utf-8
+*.csproj        text eol=lf encoding=utf-8
+*.sln           text eol=lf encoding=utf-8
+
+# Other
+*.yml		    text eol=lf encoding=utf-8
+*.yaml		    text eol=lf encoding=utf-8
+
+# Binary files
+*.dll   	    binary
+*.dat       	binary
+*.pfx       	binary
+
+# Images
+*.svg		    text eol=lf encoding=utf-8
+*.png		    binary
+*.jpg  	        binary
+*.png 	        binary
+*.gif 	        binary
