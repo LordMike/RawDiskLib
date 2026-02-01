@@ -1,12 +1,33 @@
 .vs/
 .idea/
-bin/
-obj/
-Build/
-
-# Files for local dev
+[Bb]in/
+[Oo]bj/
+[Bb]uild/
+Thumbs.db
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.cache
+*.ilk
+*.log
+*.sbr
+[Dd]ebug*/
+[Rr]elease*/
+_ReSharper*/
+packages/
+.tmp/
+tmp/
 *.user
 *.local.json
+.terraform/
+*.backup
+*.bak
+.venv/
+**/__pycache__/
 
 # Verify
 # https://github.com/VerifyTests/Verify#received-and-verified

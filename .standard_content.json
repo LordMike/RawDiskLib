@@ -1,0 +1,20 @@
+{
+  "$schema": "https://github.com/LordMike/MBW.Tools.GhStandardContent/spec/StandardContent.json",
+  "meta": {
+    "repo": "LordMike/RawDiskLib",
+    "profiles": [
+      "standardContent",
+      "standardDotnet",
+      "standardNugetPush"
+    ],
+    "files": [
+      ".editorconfig",
+      ".gitattributes",
+      ".github/workflows/dotnet.yml",
+      ".github/workflows/nuget.yml",
+      ".gitignore",
+      "Directory.Build.props"
+    ],
+    "last_updated": "2026-02-01T15:41:15.5383441+00:00"
+  }
+}
