@@ -1,17 +1,22 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace RawDiskLib.Helpers
 {
-    internal static class Win32Helper
+    internal static partial class Win32Helper
     {
         private const int ERROR_INSUFFICIENT_BUFFER = 122;
         private const int ERROR_SUCCSS = 0;
 
+#if NET7_0_OR_GREATER
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        private static partial int QueryDosDevice([MarshalAs(UnmanagedType.LPStr)] string lpDeviceName, byte[] lpTargetPath, int ucchMax);
+#else
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern int QueryDosDevice(string lpDeviceName, byte[] lpTargetPath, int ucchMax);
+#endif
 
         public static string[] GetAllDevices()
         {
