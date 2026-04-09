@@ -9,7 +9,7 @@ namespace RawDiskLib.Helpers
     internal static partial class PlatformShim
     {
 #if NET7_0_OR_GREATER
-        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         private static partial SafeFileHandle CreateFile(
             string lpFileName,
             FileAccess dwDesiredAccess,
@@ -19,7 +19,7 @@ namespace RawDiskLib.Helpers
             FileAttributes dwFlagsAndAttributes,
             IntPtr hTemplateFile);
 
-        [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [LibraryImport("kernel32.dll", EntryPoint = "GetDiskFreeSpaceW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static partial bool GetDiskFreeSpace(string lpRootPathName,
             out uint lpSectorsPerCluster,

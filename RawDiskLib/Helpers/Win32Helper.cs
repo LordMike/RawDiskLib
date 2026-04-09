@@ -11,21 +11,21 @@ namespace RawDiskLib.Helpers
         private const int ERROR_SUCCSS = 0;
 
 #if NET7_0_OR_GREATER
-        [LibraryImport("kernel32.dll", SetLastError = true)]
-        private static partial int QueryDosDevice([MarshalAs(UnmanagedType.LPStr)] string lpDeviceName, byte[] lpTargetPath, int ucchMax);
+        [LibraryImport("kernel32.dll", EntryPoint = "QueryDosDeviceW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        private static partial int QueryDosDevice(string lpDeviceName, char[] lpTargetPath, int ucchMax);
 #else
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern int QueryDosDevice(string lpDeviceName, byte[] lpTargetPath, int ucchMax);
+        [DllImport("kernel32.dll", EntryPoint = "QueryDosDeviceW", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern int QueryDosDevice(string lpDeviceName, char[] lpTargetPath, int ucchMax);
 #endif
 
         public static string[] GetAllDevices()
         {
             int returnSize;
 
-            byte[] bytes = new byte[16000];
+            char[] chars = new char[16000];
             do
             {
-                returnSize = QueryDosDevice(null, bytes, bytes.Length);
+                returnSize = QueryDosDevice(null, chars, chars.Length);
                 int error = Marshal.GetLastWin32Error();
 
                 if (returnSize > 0 || error == ERROR_SUCCSS)
@@ -34,18 +34,18 @@ namespace RawDiskLib.Helpers
                 if (error != ERROR_INSUFFICIENT_BUFFER)
                     throw new Exception("Unable to query DOS devices");
 
-                bytes = new byte[bytes.Length * 2];
+                chars = new char[chars.Length * 2];
             } while (true);
 
-            // Parse as list of null-seperated ANSI strings
+            // Parse as list of null-seperated UTF-16 strings
             List<string> res = new List<string>();
             StringBuilder sb = new StringBuilder(200);
 
             for (int i = 0; i < returnSize; i++)
             {
-                if (bytes[i] != 0)
-                    sb.Append((char)bytes[i]);
-                else if (bytes[i] == 0 && sb.Length > 0)
+                if (chars[i] != '\0')
+                    sb.Append(chars[i]);
+                else if (sb.Length > 0)
                 {
                     res.Add(sb.ToString());
                     sb.Clear();
