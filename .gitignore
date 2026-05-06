@@ -32,3 +32,9 @@ tmp/
 # Verify
 # https://github.com/VerifyTests/Verify#received-and-verified
 *.received.*
+
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.egg-info/
