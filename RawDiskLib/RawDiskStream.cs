@@ -88,8 +88,8 @@ namespace RawDiskLib
                 Array.Copy(data, (int) (Position % _smallestChunkSize), buffer, offset, count);
             }
 
-            Position += actualRead;
-            return actualRead;
+            Position += Math.Min(actualRead, count);
+            return Math.Min(actualRead, count);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
