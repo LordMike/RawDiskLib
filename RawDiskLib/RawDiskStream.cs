@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Runtime.Intrinsics.X86;
 
 namespace RawDiskLib
 {
@@ -8,12 +11,16 @@ namespace RawDiskLib
     {
         private readonly FileStream _diskStream;
         private readonly int _smallestChunkSize;
+        private readonly byte[] _currentChunk;
         private readonly long _length;
+
+        private bool _didFirstRead;
 
         internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length)
         {
             _diskStream = diskStream;
             _smallestChunkSize = smallestChunkSize;
+            _currentChunk = new byte[smallestChunkSize];
             _length = length;
         }
 
@@ -53,6 +60,7 @@ namespace RawDiskLib
             Debug.Assert(diskOffset % _smallestChunkSize == 0);
 
             _diskStream.Seek(diskOffset, SeekOrigin.Begin);
+            _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
 
             return Position;
         }
@@ -64,32 +72,36 @@ namespace RawDiskLib
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            long chunk = Position / _smallestChunkSize;
-            int chunks = count / _smallestChunkSize + (Position % _smallestChunkSize == 0 ? 0 : 1);
+            (long chunkIndex, long chunkOffset) = Math.DivRem(Position, _smallestChunkSize);
 
             // Seek
-            long diskOffset = chunk * _smallestChunkSize;
-            if (diskOffset != _diskStream.Position)
+            long diskOffset = chunkIndex * _smallestChunkSize;
+            if (diskOffset != _diskStream.Position || !_didFirstRead)
+            {
                 _diskStream.Seek(diskOffset, SeekOrigin.Begin);
-
-            // Read sectors
-            int actualRead;
-            if (Position % _smallestChunkSize == 0 && count % _smallestChunkSize == 0)
-            {
-                // Read directly into target buffer
-                actualRead = _diskStream.Read(buffer, offset, count);
-            }
-            else
-            {
-                // Do a temporary buffer
-                byte[] data = new byte[(chunks + 1) * _smallestChunkSize];
-               actualRead= _diskStream.Read(data, 0, data.Length);
-
-                Array.Copy(data, (int) (Position % _smallestChunkSize), buffer, offset, count);
+                _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
+                _didFirstRead = true;
             }
 
-            Position += Math.Min(actualRead, count);
-            return Math.Min(actualRead, count);
+            int totalRead = 0;
+            while (totalRead < count)
+            {
+                if (chunkOffset >= _smallestChunkSize) 
+                {
+                    _diskStream.Seek(++chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                    _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
+                    chunkOffset -= _smallestChunkSize;
+                }
+
+                int toCopy = (int)((IEnumerable<long>)[_smallestChunkSize - chunkOffset, count - totalRead, Length - (Position + totalRead)]).Min();
+                Array.Copy(_currentChunk, chunkOffset, buffer, offset + totalRead, toCopy);
+
+                chunkOffset += toCopy;
+                totalRead += toCopy;
+            }
+
+            Position += totalRead;
+            return totalRead;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
