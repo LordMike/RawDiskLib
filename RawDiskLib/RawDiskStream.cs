@@ -59,7 +59,7 @@ namespace RawDiskLib
             Debug.Assert(diskOffset % _smallestChunkSize == 0);
 
             _diskStream.Seek(diskOffset, SeekOrigin.Begin);
-            _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
+            _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
 
             return Position;
         }
@@ -78,7 +78,7 @@ namespace RawDiskLib
             if (diskOffset != _diskStream.Position || !_didFirstRead)
             {
                 _diskStream.Seek(diskOffset, SeekOrigin.Begin);
-                _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
+                _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
                 _didFirstRead = true;
             }
 
@@ -88,7 +88,7 @@ namespace RawDiskLib
                 if (chunkOffset >= _smallestChunkSize) 
                 {
                     _diskStream.Seek(++chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
-                    _ = _diskStream.Read(_currentChunk, 0, _smallestChunkSize);
+                    _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
                     chunkOffset -= _smallestChunkSize;
                 }
 
