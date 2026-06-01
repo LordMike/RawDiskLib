@@ -6,7 +6,7 @@ namespace RawDiskLib
 {
     public class RawDiskStream : Stream
     {
-        private const int MAX_CACHE_SIZE = 1024 * 1024; // Arbitrary limit for caching
+        private const int MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024; // Arbitrary limit for caching
 
         private readonly FileStream _diskStream;
         private readonly int _smallestChunkSize;
@@ -29,7 +29,7 @@ namespace RawDiskLib
         private byte[] GetChunk(long chunkIndex)
         {
             // Evict least recently used chunks if cache exceeds limit
-            while (_chunks.Count > MAX_CACHE_SIZE)
+            while (Math.BigMul(_chunks.Count, _smallestChunkSize) > MAX_CACHE_SIZE_BYTES)
             {
                 long oldestChunkIndex = _accesses.Dequeue();
                 _chunks.Remove(oldestChunkIndex);
