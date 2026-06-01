@@ -29,9 +29,9 @@ namespace RawDiskLib
         private byte[] GetChunk(long chunkIndex)
         {
             // Evict least recently used chunks if cache exceeds limit
-            while (Math.BigMul(_chunks.Count, _smallestChunkSize) > MAX_CACHE_SIZE_BYTES)
+            while (Math.BigMul(_chunks.Count, _smallestChunkSize) > MAX_CACHE_SIZE_BYTES && 
+                _accesses.TryDequeue(out long oldestChunkIndex))
             {
-                long oldestChunkIndex = _accesses.Dequeue();
                 _chunks.Remove(oldestChunkIndex);
             }
 
@@ -89,23 +89,18 @@ namespace RawDiskLib
         public override int Read(byte[] buffer, int offset, int count)
         {
             (long chunkIndex, long chunkOffset) = Math.DivRem(Position, _smallestChunkSize);
-            byte[] chunk = GetChunk(chunkIndex);
 
             long totalRead = 0;
             while (totalRead < count && Position + totalRead < Length)
             {
-                if (chunkOffset >= _smallestChunkSize)
-                {
-                    chunk = GetChunk(++chunkIndex);
-                    chunkOffset -= _smallestChunkSize;
-                }
+                byte[] chunk = GetChunk(chunkIndex++);
 
                 long toCopy = Math.Min(_smallestChunkSize - chunkOffset, count - totalRead);
                 toCopy = Math.Min(toCopy, Length - (Position + totalRead));
 
                 Array.Copy(chunk, chunkOffset, buffer, offset + totalRead, toCopy);
+                chunkOffset = (chunkOffset + toCopy) % _smallestChunkSize;
 
-                chunkOffset += toCopy;
                 totalRead += toCopy;
             }
 
