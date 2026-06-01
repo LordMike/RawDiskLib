@@ -1,26 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
 namespace RawDiskLib
 {
     public class RawDiskStream : Stream
     {
+        private const int MAX_CACHE_SIZE = 1024 * 1024; // Arbitrary limit for caching
+
         private readonly FileStream _diskStream;
         private readonly int _smallestChunkSize;
-        private readonly byte[] _currentChunk;
         private readonly long _length;
 
-        private bool _didFirstRead;
+        // Caching mechanism: chunk index to chunk data
+        private readonly Dictionary<long, byte[]> _chunks;
+        private readonly Queue<long> _accesses;
 
         internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length)
         {
             _diskStream = diskStream;
             _smallestChunkSize = smallestChunkSize;
-            _currentChunk = new byte[smallestChunkSize];
             _length = length;
+
+            _chunks = new Dictionary<long, byte[]>();
+            _accesses = new Queue<long>();
+        }
+
+        private byte[] GetChunk(long chunkIndex)
+        {
+            // Evict least recently used chunks if cache exceeds limit
+            while (_chunks.Count > MAX_CACHE_SIZE)
+            {
+                long oldestChunkIndex = _accesses.Dequeue();
+                _chunks.Remove(oldestChunkIndex);
+            }
+
+            if (!_chunks.TryGetValue(chunkIndex, out byte[] chunk))
+            {
+                chunk = new byte[_smallestChunkSize];
+                _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                _diskStream.ReadExactly(chunk, 0, _smallestChunkSize);
+
+                _chunks.Add(chunkIndex, chunk);
+                _accesses.Enqueue(chunkIndex);
+            }
+
+            return chunk;
         }
 
         public override void Flush()
@@ -53,14 +78,6 @@ namespace RawDiskLib
             // Valid
             Position = newPosition;
 
-            // Position disk stream
-            long diskOffset = Position - Position % _smallestChunkSize; // Align to a multiple of '_smallestChunkSize'
-
-            Debug.Assert(diskOffset % _smallestChunkSize == 0);
-
-            _diskStream.Seek(diskOffset, SeekOrigin.Begin);
-            _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
-
             return Position;
         }
 
@@ -72,109 +89,53 @@ namespace RawDiskLib
         public override int Read(byte[] buffer, int offset, int count)
         {
             (long chunkIndex, long chunkOffset) = Math.DivRem(Position, _smallestChunkSize);
+            byte[] chunk = GetChunk(chunkIndex);
 
-            // Seek
-            long diskOffset = chunkIndex * _smallestChunkSize;
-            if (diskOffset != _diskStream.Position || !_didFirstRead)
+            long totalRead = 0;
+            while (totalRead < count && Position + totalRead < Length)
             {
-                _diskStream.Seek(diskOffset, SeekOrigin.Begin);
-                _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
-                _didFirstRead = true;
-            }
-
-            int totalRead = 0;
-            while (totalRead < count)
-            {
-                if (chunkOffset >= _smallestChunkSize) 
+                if (chunkOffset >= _smallestChunkSize)
                 {
-                    _diskStream.Seek(++chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
-                    _diskStream.ReadExactly(_currentChunk, 0, _smallestChunkSize);
+                    chunk = GetChunk(++chunkIndex);
                     chunkOffset -= _smallestChunkSize;
                 }
 
-                int toCopy = (int)((IEnumerable<long>)[_smallestChunkSize - chunkOffset, count - totalRead, Length - (Position + totalRead)]).Min();
-                Array.Copy(_currentChunk, chunkOffset, buffer, offset + totalRead, toCopy);
+                long toCopy = Math.Min(_smallestChunkSize - chunkOffset, count - totalRead);
+                toCopy = Math.Min(toCopy, Length - (Position + totalRead));
+
+                Array.Copy(chunk, chunkOffset, buffer, offset + totalRead, toCopy);
 
                 chunkOffset += toCopy;
                 totalRead += toCopy;
             }
 
             Position += totalRead;
-            return totalRead;
+            return (int)totalRead;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            long chunk = Position / _smallestChunkSize;
-            int chunks = count / _smallestChunkSize + (Position % _smallestChunkSize == 0 ? 0 : 1);
+            throw new NotSupportedException();
+        }
 
-            // Write sectors
-            if (Position % _smallestChunkSize == 0 && count % _smallestChunkSize == 0)
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+
+            if (disposing)
             {
-                // Seek
-                long diskOffset = chunk * _smallestChunkSize;
-                if (diskOffset != _diskStream.Position)
-                    _diskStream.Seek(diskOffset, SeekOrigin.Begin);
+                _diskStream.Dispose();
 
-                // Write directly into stream
-                _diskStream.Write(buffer, offset, count);
+                _chunks.Clear();
+                _accesses.Clear();
             }
-            else
-            {
-                // Do copy-on write
-                byte[] tmpBuff = new byte[_smallestChunkSize];
-
-                int firstChunkLength = _smallestChunkSize - (int)(Position % _smallestChunkSize);
-                int middleChunksLength = ((count - firstChunkLength) / _smallestChunkSize) * _smallestChunkSize;        // This will ensure that 'middleChunksLength' is a multiple of '_smallestChunkSize'
-                int lastChunkLength = count - middleChunksLength - firstChunkLength;
-
-                Debug.Assert(0 <= firstChunkLength && firstChunkLength < _smallestChunkSize);
-                Debug.Assert(middleChunksLength % _smallestChunkSize == 0);
-                Debug.Assert(0 <= lastChunkLength && lastChunkLength < _smallestChunkSize);
-
-                // Seek
-                _diskStream.Seek(chunk * _smallestChunkSize, SeekOrigin.Begin);
-
-                // == First chunk ==
-                if (firstChunkLength > 0)
-                {
-                    // Do copy-on write
-                    _diskStream.Read(tmpBuff, 0, tmpBuff.Length);
-
-                    Array.Copy(buffer, offset, tmpBuff, tmpBuff.Length - firstChunkLength, firstChunkLength);
-
-                    _diskStream.Seek(-tmpBuff.Length, SeekOrigin.Current);
-                    _diskStream.Write(tmpBuff, 0, tmpBuff.Length);
-                }
-
-                // == Middle chunks ==
-                if (middleChunksLength > 0)
-                {
-                    // Write directly
-                    _diskStream.Write(buffer, offset + firstChunkLength, middleChunksLength);
-                }
-
-                // == Last chunk ==
-                if (lastChunkLength > 0)
-                {
-                    // Do copy-on write
-                    _diskStream.Read(tmpBuff, 0, tmpBuff.Length);
-
-                    Array.Copy(buffer, offset + firstChunkLength + middleChunksLength, tmpBuff, 0, lastChunkLength);
-
-                    _diskStream.Seek(-tmpBuff.Length, SeekOrigin.Current);
-                    _diskStream.Write(tmpBuff, 0, tmpBuff.Length);
-                }
-            }
-
-            Position += count;
         }
 
         public override bool CanRead => _diskStream.CanRead;
 
         public override bool CanSeek => _diskStream.CanSeek;
 
-        public override bool CanWrite => _diskStream.CanWrite;
+        public override bool CanWrite => false;
 
         public override long Length => _length;
 
