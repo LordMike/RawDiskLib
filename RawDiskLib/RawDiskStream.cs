@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 
@@ -13,15 +14,17 @@ namespace RawDiskLib
         private readonly long _length;
 
         // Caching mechanism: chunk index to chunk data
+        private readonly ArrayPool<byte> _bufferArrayPool;
         private readonly Dictionary<long, byte[]> _chunks;
         private readonly Queue<long> _accesses;
 
-        internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length)
+        internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length, ArrayPool<byte> bufferArrayPool)
         {
             _diskStream = diskStream;
             _smallestChunkSize = smallestChunkSize;
             _length = length;
 
+            _bufferArrayPool = bufferArrayPool;
             _chunks = new Dictionary<long, byte[]>();
             _accesses = new Queue<long>();
         }
@@ -32,12 +35,13 @@ namespace RawDiskLib
             while (Math.BigMul(_chunks.Count, _smallestChunkSize) > MAX_CACHE_SIZE_BYTES && 
                 _accesses.TryDequeue(out long oldestChunkIndex))
             {
-                _chunks.Remove(oldestChunkIndex);
+                _chunks.Remove(oldestChunkIndex, out byte[] oldestChunk);
+                _bufferArrayPool.Return(oldestChunk, clearArray: true);
             }
 
             if (!_chunks.TryGetValue(chunkIndex, out byte[] chunk))
             {
-                chunk = new byte[_smallestChunkSize];
+                chunk = _bufferArrayPool.Rent(_smallestChunkSize);
                 _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
                 _diskStream.ReadExactly(chunk, 0, _smallestChunkSize);
 

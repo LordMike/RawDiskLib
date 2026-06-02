@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using DeviceIOControlLib.Objects.Disk;
@@ -214,12 +215,12 @@ namespace RawDiskLib
             return wasRead;
         }
 
-        public RawDiskStream CreateDiskStream()
+        public RawDiskStream CreateDiskStream(ArrayPool<byte> bufferArrayPool)
         {
             SafeFileHandle diskHandle = PlatformShim.CreateDeviceHandle(DosDeviceName, _access);
             FileStream diskFs = new FileStream(diskHandle, _access);
 
-            return new RawDiskStream(diskFs, SectorSize, SizeBytes);
+            return new RawDiskStream(diskFs, SectorSize, SizeBytes, bufferArrayPool);
         }
 
         public void Dispose()
