@@ -123,10 +123,15 @@ namespace RawDiskLib
 
             if (disposing)
             {
-                _diskStream.Dispose();
+                foreach ((long _, byte[] chunk) in _chunks)
+                {
+                    _bufferArrayPool.Return(chunk, clearArray: true);
+                }
 
                 _chunks.Clear();
                 _accesses.Clear();
+
+                _diskStream.Dispose();
             }
         }
 
