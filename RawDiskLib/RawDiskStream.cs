@@ -7,6 +7,13 @@ namespace RawDiskLib
 {
     public class RawDiskStream : Stream
     {
+        private class ChunkInfo 
+        {
+            public byte[] Data { get; init; }
+
+            public bool IsDirty { get; set; }
+        }
+
         private const int MAX_CACHE_SIZE_BYTES = 1024 * 1024 * 1024; // Arbitrary limit for caching
 
         private readonly FileStream _diskStream;
@@ -15,7 +22,7 @@ namespace RawDiskLib
 
         // Caching mechanism: chunk index to chunk data
         private readonly ArrayPool<byte> _bufferArrayPool;
-        private readonly SortedDictionary<long, byte[]> _chunks;
+        private readonly SortedDictionary<long, ChunkInfo> _chunks;
         private readonly Queue<long> _accesses;
 
         internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length, ArrayPool<byte> bufferArrayPool)
@@ -25,42 +32,54 @@ namespace RawDiskLib
             _length = length;
 
             _bufferArrayPool = bufferArrayPool;
-            _chunks = new SortedDictionary<long, byte[]>();
+            _chunks = new SortedDictionary<long, ChunkInfo>();
             _accesses = new Queue<long>();
         }
 
-        private byte[] GetChunk(long chunkIndex)
+        private ChunkInfo GetChunk(long chunkIndex)
         {
             // Evict least recently used chunks if cache exceeds limit
             while (Math.BigMul(_chunks.Count, _smallestChunkSize) > MAX_CACHE_SIZE_BYTES && 
                 _accesses.TryDequeue(out long oldestChunkIndex))
             {
-                _chunks.Remove(oldestChunkIndex, out byte[] oldestChunk);
-                _diskStream.Seek(oldestChunkIndex * _smallestChunkSize, SeekOrigin.Begin);
-                _diskStream.Write(oldestChunk, 0, _smallestChunkSize);
-                _bufferArrayPool.Return(oldestChunk, clearArray: true);
+                _chunks.Remove(oldestChunkIndex, out ChunkInfo oldestChunkInfo);
+                if (oldestChunkInfo.IsDirty)
+                {
+                    _diskStream.Seek(oldestChunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                    _diskStream.Write(oldestChunkInfo.Data, 0, _smallestChunkSize);
+                }
+
+                _bufferArrayPool.Return(oldestChunkInfo.Data, clearArray: true);
             }
 
-            if (!_chunks.TryGetValue(chunkIndex, out byte[] chunk))
+            if (!_chunks.TryGetValue(chunkIndex, out ChunkInfo chunkInfo))
             {
-                chunk = _bufferArrayPool.Rent(_smallestChunkSize);
-                _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
-                _diskStream.ReadExactly(chunk, 0, _smallestChunkSize);
+                chunkInfo = new ChunkInfo
+                {
+                    Data = _bufferArrayPool.Rent(_smallestChunkSize),
+                };
 
-                _chunks.Add(chunkIndex, chunk);
+                _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                _diskStream.ReadExactly(chunkInfo.Data, 0, _smallestChunkSize);
+
+                _chunks.Add(chunkIndex, chunkInfo);
                 _accesses.Enqueue(chunkIndex);
             }
 
-            return chunk;
+            return chunkInfo;
         }
 
         public override void Flush()
         {
-            foreach ((long chunkIndex, byte[] chunk) in _chunks)
+            foreach ((long chunkIndex, ChunkInfo chunkInfo) in _chunks)
             {
-                _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
-                _diskStream.Write(chunk, 0, _smallestChunkSize);
-                _bufferArrayPool.Return(chunk, clearArray: true);
+                if (chunkInfo.IsDirty)
+                {
+                    _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                    _diskStream.Write(chunkInfo.Data, 0, _smallestChunkSize);
+                }
+
+                _bufferArrayPool.Return(chunkInfo.Data, clearArray: true);
             }
 
             _chunks.Clear();
@@ -109,12 +128,12 @@ namespace RawDiskLib
             long totalRead = 0;
             while (totalRead < count && Position + totalRead < Length)
             {
-                byte[] chunk = GetChunk(chunkIndex++);
+                ChunkInfo chunkInfo = GetChunk(chunkIndex++);
 
                 long toCopy = Math.Min(_smallestChunkSize - chunkOffset, count - totalRead);
                 toCopy = Math.Min(toCopy, Length - (Position + totalRead));
 
-                Array.Copy(chunk, chunkOffset, buffer, offset + totalRead, toCopy);
+                Array.Copy(chunkInfo.Data, chunkOffset, buffer, offset + totalRead, toCopy);
                 chunkOffset = (chunkOffset + toCopy) % _smallestChunkSize;
 
                 totalRead += toCopy;
@@ -131,12 +150,13 @@ namespace RawDiskLib
             long totalWritten = 0;
             while (totalWritten < count && Position + totalWritten < Length)
             {
-                byte[] chunk = GetChunk(chunkIndex++);
+                ChunkInfo chunkInfo = GetChunk(chunkIndex++);
 
                 long toCopy = Math.Min(_smallestChunkSize - chunkOffset, count - totalWritten);
                 toCopy = Math.Min(toCopy, Length - (Position + totalWritten));
+                if(toCopy > 0) chunkInfo.IsDirty = true;
 
-                Array.Copy(buffer, offset + totalWritten, chunk, chunkOffset, toCopy);
+                Array.Copy(buffer, offset + totalWritten, chunkInfo.Data, chunkOffset, toCopy);
                 chunkOffset = (chunkOffset + toCopy) % _smallestChunkSize;
 
                 totalWritten += toCopy;
