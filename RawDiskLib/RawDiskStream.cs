@@ -15,7 +15,7 @@ namespace RawDiskLib
 
         // Caching mechanism: chunk index to chunk data
         private readonly ArrayPool<byte> _bufferArrayPool;
-        private readonly Dictionary<long, byte[]> _chunks;
+        private readonly SortedDictionary<long, byte[]> _chunks;
         private readonly Queue<long> _accesses;
 
         internal RawDiskStream(FileStream diskStream, int smallestChunkSize, long length, ArrayPool<byte> bufferArrayPool)
@@ -25,7 +25,7 @@ namespace RawDiskLib
             _length = length;
 
             _bufferArrayPool = bufferArrayPool;
-            _chunks = new Dictionary<long, byte[]>();
+            _chunks = new SortedDictionary<long, byte[]>();
             _accesses = new Queue<long>();
         }
 
@@ -36,6 +36,8 @@ namespace RawDiskLib
                 _accesses.TryDequeue(out long oldestChunkIndex))
             {
                 _chunks.Remove(oldestChunkIndex, out byte[] oldestChunk);
+                _diskStream.Seek(oldestChunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                _diskStream.Write(oldestChunk, 0, _smallestChunkSize);
                 _bufferArrayPool.Return(oldestChunk, clearArray: true);
             }
 
@@ -54,6 +56,16 @@ namespace RawDiskLib
 
         public override void Flush()
         {
+            foreach ((long chunkIndex, byte[] chunk) in _chunks)
+            {
+                _diskStream.Seek(chunkIndex * _smallestChunkSize, SeekOrigin.Begin);
+                _diskStream.Write(chunk, 0, _smallestChunkSize);
+                _bufferArrayPool.Return(chunk, clearArray: true);
+            }
+
+            _chunks.Clear();
+            _accesses.Clear();
+
             _diskStream.Flush();
         }
 
@@ -114,7 +126,23 @@ namespace RawDiskLib
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            throw new NotSupportedException();
+            (long chunkIndex, long chunkOffset) = Math.DivRem(Position, _smallestChunkSize);
+
+            long totalWritten = 0;
+            while (totalWritten < count && Position + totalWritten < Length)
+            {
+                byte[] chunk = GetChunk(chunkIndex++);
+
+                long toCopy = Math.Min(_smallestChunkSize - chunkOffset, count - totalWritten);
+                toCopy = Math.Min(toCopy, Length - (Position + totalWritten));
+
+                Array.Copy(buffer, offset + totalWritten, chunk, chunkOffset, toCopy);
+                chunkOffset = (chunkOffset + toCopy) % _smallestChunkSize;
+
+                totalWritten += toCopy;
+            }
+
+            Position += totalWritten;
         }
 
         protected override void Dispose(bool disposing)
@@ -123,15 +151,7 @@ namespace RawDiskLib
 
             if (disposing)
             {
-                foreach ((long _, byte[] chunk) in _chunks)
-                {
-                    _bufferArrayPool.Return(chunk, clearArray: true);
-                }
-
-                _chunks.Clear();
-                _accesses.Clear();
-
-                _diskStream.Dispose();
+                Flush(); _diskStream.Dispose();
             }
         }
 
@@ -139,7 +159,7 @@ namespace RawDiskLib
 
         public override bool CanSeek => _diskStream.CanSeek;
 
-        public override bool CanWrite => false;
+        public override bool CanWrite => _diskStream.CanWrite;
 
         public override long Length => _length;
 
