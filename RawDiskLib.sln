@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31105.61
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11822.327 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RawDiskLib", "RawDiskLib\RawDiskLib.csproj", "{C2D3D361-FD53-4928-8467-72AAD5C63D24}"
 EndProject
@@ -20,6 +20,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Imports", "_Imports", "{85
 		_Imports\Local.targets = _Imports\Local.targets
 		_Imports\Test.targets = _Imports\Test.targets
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeviceIOControlLib", "DeviceIOControlLib\DeviceIOControlLib\DeviceIOControlLib.csproj", "{594A0CB5-BCD6-869F-EDED-DF848149BB1B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +57,18 @@ Global
 		{0D4905FB-6E29-4ADF-90B7-C560B962F3F0}.Release|x64.Build.0 = Release|Any CPU
 		{0D4905FB-6E29-4ADF-90B7-C560B962F3F0}.Release|x86.ActiveCfg = Release|Any CPU
 		{0D4905FB-6E29-4ADF-90B7-C560B962F3F0}.Release|x86.Build.0 = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|x64.Build.0 = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Debug|x86.Build.0 = Debug|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|x64.ActiveCfg = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|x64.Build.0 = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|x86.ActiveCfg = Release|Any CPU
+		{594A0CB5-BCD6-869F-EDED-DF848149BB1B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
