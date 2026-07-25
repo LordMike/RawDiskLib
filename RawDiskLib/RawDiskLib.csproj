@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsPackable>true</IsPackable>
     <TargetFrameworks>netstandard2.0;net7.0-windows;net8.0-windows</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Library to read and write to raw disks in Windows, something that can be tricky from time to time</Description>
