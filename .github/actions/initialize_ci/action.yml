@@ -1,0 +1,113 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Initialize CI
+description: Resolve the trusted ref context and prepare the fixed CI artifact layout
+
+# Contract:
+# - This is the sole interpreter of branch and version semantics.
+# - It exports CI_* variables for later steps and matching action outputs for jobs.
+# - It owns the fixed .artifacts layout and provenance schema.
+
+outputs:
+  publish-target:
+    value: ${{ steps.context.outputs.publish-target }}
+  release-tag:
+    value: ${{ steps.context.outputs.release-tag }}
+  version:
+    value: ${{ steps.context.outputs.version }}
+  is-release:
+    value: ${{ steps.context.outputs.is-release }}
+  is-prerelease:
+    value: ${{ steps.context.outputs.is-prerelease }}
+  is-plain-version:
+    value: ${{ steps.context.outputs.is-plain-version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve ref and version
+      id: context
+      shell: bash
+      env:
+        CI_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        CI_EVENT_NAME: ${{ github.event_name }}
+        CI_REPOSITORY: ${{ github.repository }}
+        CI_RUN_ID: ${{ github.run_id }}
+        CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: |
+        set -euo pipefail
+
+        is_release=false
+        is_prerelease=false
+        is_plain_version=false
+        release_tag=''
+        version=''
+        if [[ "$GITHUB_REF" == refs/tags/* ]] && printf '%s' "$GITHUB_REF_NAME" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+          is_release=true
+          release_tag="$GITHUB_REF_NAME"
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" == *-* ]]; then
+            is_prerelease=true
+          fi
+          if printf '%s' "$release_tag" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            is_plain_version=true
+          fi
+        fi
+
+        publish_target=none
+        if [ "$CI_EVENT_NAME" = push ] && [ "$GITHUB_REF" = "refs/heads/$CI_DEFAULT_BRANCH" ]; then
+          publish_target=development
+        elif [ "$CI_EVENT_NAME" = push ] && [ "$is_release" = true ]; then
+          publish_target=release
+        fi
+
+        mkdir -p .artifacts/nuget .artifacts/release .artifacts/deploy
+
+        jq -n \
+          --arg repository "$CI_REPOSITORY" \
+          --arg event "$CI_EVENT_NAME" \
+          --arg sha "$GITHUB_SHA" \
+          --arg ref "$GITHUB_REF" \
+          --arg ref_name "$GITHUB_REF_NAME" \
+          --arg default_branch "$CI_DEFAULT_BRANCH" \
+          --arg release_tag "$release_tag" \
+          --arg version "$version" \
+          --argjson run_id "$CI_RUN_ID" \
+          --argjson run_attempt "$CI_RUN_ATTEMPT" \
+          --argjson is_release "$is_release" \
+          --argjson is_prerelease "$is_prerelease" \
+          --argjson is_plain_version "$is_plain_version" \
+          '{
+            schemaVersion: 1,
+            repository: $repository,
+            event: $event,
+            sha: $sha,
+            ref: $ref,
+            refName: $ref_name,
+            defaultBranch: $default_branch,
+            runId: $run_id,
+            runAttempt: $run_attempt,
+            releaseTag: $release_tag,
+            version: $version,
+            isRelease: $is_release,
+            isPrerelease: $is_prerelease,
+            isPlainVersion: $is_plain_version
+          }' > .artifacts/ci-metadata.json
+
+        {
+          echo "CI_PUBLISH_TARGET=$publish_target"
+          echo "CI_RELEASE_TAG=$release_tag"
+          echo "CI_VERSION=$version"
+          echo "CI_IS_RELEASE=$is_release"
+          echo "CI_IS_PRERELEASE=$is_prerelease"
+          echo "CI_IS_PLAIN_VERSION=$is_plain_version"
+        } >> "$GITHUB_ENV"
+
+        {
+          echo "publish-target=$publish_target"
+          echo "release-tag=$release_tag"
+          echo "version=$version"
+          echo "is-release=$is_release"
+          echo "is-prerelease=$is_prerelease"
+          echo "is-plain-version=$is_plain_version"
+        } >> "$GITHUB_OUTPUT"

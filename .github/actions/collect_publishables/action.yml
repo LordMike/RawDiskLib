@@ -1,0 +1,101 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Collect publishable outputs
+description: Detect package and Docker outputs without publishing
+
+# Contract:
+# - Package presence, not project inspection, selects package publication.
+# - Dockerfile presence, not repository configuration, selects Docker publication.
+# - This action never builds Docker images and never receives credentials.
+
+outputs:
+  has-packages:
+    value: ${{ steps.packages.outputs.has-packages }}
+  has-docker:
+    value: ${{ steps.docker.outputs.has-docker }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect package artifacts
+      id: packages
+      shell: bash
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        packages=(.artifacts/nuget/*.nupkg)
+        has_packages=false
+        if [ "${#packages[@]}" -gt 0 ]; then
+          has_packages=true
+        fi
+
+        echo "has-packages=$has_packages" >> "$GITHUB_OUTPUT"
+
+    - name: Discover Dockerfiles
+      id: docker
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        metadata=.artifacts/docker-images.json
+        printf '[]\n' > "$metadata"
+
+        mapfile -d '' dockerfiles < <(
+          find . -type f \( -name Dockerfile -o -name 'Dockerfile.*' \) \
+            -not -path './.git/*' \
+            -not -path './.artifacts/*' \
+            -not -path '*/node_modules/*' \
+            -not -path '*/bin/*' \
+            -not -path '*/obj/*' \
+            -print0 \
+            | sort -z
+        )
+
+        if [ "${#dockerfiles[@]}" -eq 0 ]; then
+          echo 'has-docker=false' >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        configured_dockerfile=''
+        configured_image=''
+        configured_platforms=''
+        if [ -f .env ]; then
+          configured_dockerfile="$(sed -nE 's/^DOCKER_DOCKERFILE=(.+)\r?$/\1/p' .env | tail -n1)"
+          configured_image="$(sed -nE 's/^DOCKER_TAG=(.+)\r?$/\1/p' .env | tail -n1)"
+          configured_platforms="$(sed -nE 's/^DOCKER_PLATFORMS=(.+)\r?$/\1/p' .env | tail -n1)"
+        fi
+
+        repository_image="ghcr.io/${GITHUB_REPOSITORY,,}"
+        for dockerfile_path in "${dockerfiles[@]}"; do
+          dockerfile="${dockerfile_path#./}"
+          if [ -n "$configured_dockerfile" ] && [ -n "$configured_image" ] && [ "$dockerfile" = "$configured_dockerfile" ]; then
+            image="$configured_image"
+            platforms="${configured_platforms:-linux/amd64}"
+          else
+            filename="$(basename "$dockerfile")"
+            suffix=''
+            if [[ "$filename" == Dockerfile.* ]]; then
+              suffix="-${filename#Dockerfile.}"
+            elif [ "${#dockerfiles[@]}" -gt 1 ]; then
+              directory="$(dirname "$dockerfile")"
+              if [ "$directory" != . ]; then
+                suffix="-$(printf '%s' "$directory" | tr '/_' '--')"
+              fi
+            fi
+
+            image="${repository_image}${suffix,,}"
+            platforms=linux/amd64
+          fi
+
+          jq \
+            --arg dockerfile "$dockerfile" \
+            --arg image "$image" \
+            --arg platforms "$platforms" \
+            '. + [{dockerfile:$dockerfile,context:".",image:$image,platforms:$platforms}]' \
+            "$metadata" > "$metadata.next"
+          mv "$metadata.next" "$metadata"
+        done
+
+        echo 'has-docker=true' >> "$GITHUB_OUTPUT"
+        jq -r '.[] | "Docker: \(.dockerfile) -> \(.image) [\(.platforms)]"' "$metadata"

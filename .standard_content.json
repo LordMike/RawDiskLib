@@ -1,20 +1,28 @@
 {
-  "$schema": "https://github.com/LordMike/MBW.Tools.GhStandardContent/spec/StandardContent.json",
+  "$schema": "https://raw.githubusercontent.com/LordMike/MBW.Tools.GhStandardContent/master/spec/StandardContent.json",
   "meta": {
     "repo": "LordMike/RawDiskLib",
     "profiles": [
+      "standardCI",
       "standardContent",
-      "standardDotnet",
-      "standardNugetPush"
+      "standardDotnetBuild",
+      "standardNoDeploy"
     ],
     "files": [
       ".editorconfig",
       ".gitattributes",
-      ".github/workflows/dotnet.yml",
-      ".github/workflows/nuget.yml",
+      ".github/actions/build/action.yml",
+      ".github/actions/collect_publishables/action.yml",
+      ".github/actions/initialize_ci/action.yml",
+      ".github/actions/publish_docker/action.yml",
+      ".github/actions/publish_github_release/action.yml",
+      ".github/actions/publish_nuget/action.yml",
+      ".github/readme.md",
+      ".github/workflows/ci.yml",
+      ".github/workflows/deploy.yml",
       ".gitignore",
       "Directory.Build.props"
     ],
-    "last_updated": "2026-05-06T11:09:49.3720335+00:00"
+    "last_updated": "2026-07-26T09:05:03.9614535\u002B00:00"
   }
 }

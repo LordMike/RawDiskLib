@@ -1,0 +1,60 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Publish NuGet packages
+description: Publish collected NuGet packages to the registries selected by CI
+
+# Contract:
+# - Packages are read only from .artifacts/nuget.
+# - All publishable refs go to GitHub Packages.
+# - Release refs additionally go to NuGet.org.
+# - Registry credentials are supplied only by the invoking publishing job.
+
+inputs:
+  publish-target:
+    description: CI publish target (development or release)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Publish NuGet packages to GitHub Packages
+      shell: bash
+      env:
+        PACKAGE_TOKEN: ${{ env.NUGET_GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        for package in .artifacts/nuget/*.nupkg; do
+          dotnet nuget push "$package" \
+            --no-symbols \
+            --skip-duplicate \
+            --api-key "$PACKAGE_TOKEN" \
+            --source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json"
+        done
+
+    - name: Publish release packages to NuGet.org
+      if: inputs.publish-target == 'release'
+      shell: bash
+      env:
+        NUGET_KEY: ${{ env.NUGET_ORG_KEY }}
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+
+        if [ -z "$NUGET_KEY" ]; then
+          echo '::error::NUGET_KEY is required for tagged package publication.'
+          exit 1
+        fi
+
+        for package in .artifacts/nuget/*.nupkg; do
+          dotnet nuget push "$package" \
+            --skip-duplicate \
+            --api-key "$NUGET_KEY" \
+            --source https://api.nuget.org/v3/index.json
+        done

@@ -1,0 +1,99 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Publish Docker images
+description: Build and publish every Docker image described by CI metadata
+
+# Contract:
+# - Image definitions are read only from .artifacts/docker-images.json.
+# - Each image is built exactly once in this publishing job.
+# - Development refs publish :dev; releases publish :<version> and stable :latest.
+# - Every build receives BUILD_VERSION=dev or the normalized release version.
+# - Registry credentials are supplied only by the invoking publishing job.
+
+inputs:
+  publish-target:
+    description: CI publish target (development or release)
+    required: true
+  version:
+    description: Normalized release version, empty for development
+    required: false
+    default: ''
+  is-prerelease:
+    description: Whether the release version is a prerelease
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Detect required registries
+      id: registries
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        has_ghcr="$(jq 'any(.[]; .image | startswith("ghcr.io/"))' .artifacts/docker-images.json)"
+        has_docker_hub="$(jq 'any(.[]; (.image | startswith("ghcr.io/") | not))' .artifacts/docker-images.json)"
+        {
+          echo "has-ghcr=$has_ghcr"
+          echo "has-docker-hub=$has_docker_hub"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      if: steps.registries.outputs.has-ghcr == 'true'
+      uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ env.DOCKER_GITHUB_TOKEN }}
+
+    - name: Log in to Docker Hub
+      if: steps.registries.outputs.has-docker-hub == 'true'
+      uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
+      with:
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ env.DOCKER_KEY }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+    - name: Build and publish Docker images
+      shell: bash
+      env:
+        PUBLISH_TARGET: ${{ inputs.publish-target }}
+        VERSION: ${{ inputs.version }}
+        IS_PRERELEASE: ${{ inputs.is-prerelease }}
+      run: |
+        set -euo pipefail
+
+        while IFS= read -r image_json; do
+          dockerfile="$(jq -r '.dockerfile' <<< "$image_json")"
+          context="$(jq -r '.context' <<< "$image_json")"
+          image="$(jq -r '.image' <<< "$image_json")"
+          platforms="$(jq -r '.platforms' <<< "$image_json")"
+          cache_scope="$(printf '%s' "$image" | tr '/:.' '---')"
+
+          tag_args=()
+          if [ "$PUBLISH_TARGET" = development ]; then
+            build_version=dev
+            tag_args+=(--tag "$image:dev")
+          else
+            build_version="$VERSION"
+            tag_args+=(--tag "$image:$VERSION")
+            if [ "$IS_PRERELEASE" = false ]; then
+              tag_args+=(--tag "$image:latest")
+            fi
+          fi
+
+          docker buildx build \
+            --file "$dockerfile" \
+            --platform "$platforms" \
+            "${tag_args[@]}" \
+            --build-arg "BUILD_VERSION=$build_version" \
+            --cache-from "type=gha,scope=$cache_scope" \
+            --cache-to "type=gha,mode=max,scope=$cache_scope" \
+            --push \
+            "$context"
+        done < <(jq -c '.[]' .artifacts/docker-images.json)

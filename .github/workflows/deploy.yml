@@ -1,0 +1,36 @@
+# This file is centrally managed; local edits may be lost.
+
+name: No deployment
+
+# Contract:
+# - CI calls this after all applicable SemVer-tag publishing succeeds.
+# - Repositories without post-release work use this specialization.
+# - Its skipped job allocates no runner and keeps the parent CI successful.
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Original release tag, including any v prefix
+        required: true
+        type: string
+      version:
+        description: Normalized SemVer version
+        required: true
+        type: string
+      is-prerelease:
+        description: Whether the version is a prerelease
+        required: true
+        type: string
+      is-plain-version:
+        description: Whether the tag is an exact stable numeric version
+        required: true
+        type: string
+
+jobs:
+  no_deployment:
+    name: No deployment configured
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: ':'
