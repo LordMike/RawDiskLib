@@ -5,7 +5,8 @@
     "profiles": [
       "standardCI",
       "standardContent",
-      "standardDotnetBuild",
+      "standardDotnet",
+      "standardDotnetBuildAction",
       "standardNoDeploy"
     ],
     "files": [
@@ -23,6 +24,6 @@
       ".gitignore",
       "Directory.Build.props"
     ],
-    "last_updated": "2026-07-26T09:05:03.9614535\u002B00:00"
+    "last_updated": "2026-07-26T20:34:03.3765476\u002B00:00"
   }
 }
