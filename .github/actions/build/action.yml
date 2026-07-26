@@ -1,0 +1,57 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Standard .NET build
+description: Build, test, and package a conventional .NET repository without publishing
+
+# Contract:
+# - CI owns the fixed .artifacts layout; this action deliberately has no path inputs.
+# - The repository must be buildable from its root with the dotnet CLI.
+# - .ci-skip-tests remains a temporary escape hatch for repositories without tests.
+# - Effective IsPackable projects write packages to the fixed NuGet directory.
+# - This action never receives credentials and never publishes anything.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Restore
+      shell: bash
+      run: dotnet restore
+
+    - name: Build
+      shell: bash
+      run: |
+        set -euo pipefail
+        version_args=()
+        if [ -n "${CI_VERSION:-}" ]; then
+          version_args+=("-p:Version=$CI_VERSION")
+        fi
+
+        dotnet build --configuration Release --no-restore "${version_args[@]}"
+
+    - name: Test
+      if: hashFiles('.ci-skip-tests') == ''
+      shell: bash
+      run: dotnet test --configuration Release --no-build --verbosity normal
+
+    - name: Pack effective IsPackable projects
+      if: env.CI_PUBLISH_TARGET != 'none'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p .artifacts/nuget
+
+        version_args=()
+        if [ -n "${CI_VERSION:-}" ]; then
+          version_args+=("-p:Version=$CI_VERSION")
+        fi
+
+        dotnet pack \
+          --configuration Release \
+          --no-build \
+          --output .artifacts/nuget \
+          "${version_args[@]}"

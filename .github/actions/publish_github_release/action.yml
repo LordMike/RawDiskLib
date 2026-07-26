@@ -1,0 +1,52 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Publish GitHub Release
+description: Idempotently create a GitHub Release and upload collected attachments
+
+# Contract:
+# - CI invokes this only for a validated stable or prerelease SemVer tag.
+# - Attachments are read only from .artifacts/release.
+# - The GitHub token is supplied only by the invoking release job.
+
+inputs:
+  release-tag:
+    description: Original release tag, including any v prefix
+    required: true
+  is-prerelease:
+    description: Whether GitHub should mark the release as a prerelease
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create or update GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ env.GITHUB_RELEASE_TOKEN }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+        IS_PRERELEASE: ${{ inputs.is-prerelease }}
+      run: |
+        set -euo pipefail
+
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          create_args=(
+            "$RELEASE_TAG"
+            --verify-tag
+            --generate-notes
+            --title "$RELEASE_TAG"
+          )
+          if [ "$IS_PRERELEASE" = true ]; then
+            create_args+=(--prerelease)
+          fi
+
+          gh release create "${create_args[@]}"
+        else
+          echo "GitHub Release $RELEASE_TAG already exists; refreshing attachments."
+        fi
+
+        mapfile -d '' release_files < <(find .artifacts/release -type f -print0 | sort -z)
+        if [ "${#release_files[@]}" -gt 0 ]; then
+          gh release upload "$RELEASE_TAG" "${release_files[@]}" --clobber
+        else
+          echo 'No GitHub Release attachments were produced.'
+        fi

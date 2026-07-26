@@ -1,0 +1,205 @@
+# This file is centrally managed; local edits may be lost.
+
+name: CI
+
+# Contract:
+# - This is the only event-triggered managed workflow.
+# - Every active run builds and tests exactly once through the repository action.
+# - Feature branches, pull requests, and manual runs allocate no publishing jobs.
+# - Publishing jobs use trusted GitHub ref guards and receive only their own secrets.
+# - Implementation lives in explicit local actions and the reusable deploy workflow.
+# - This file describes orchestration and contains no repository-specific behavior.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  build:
+    name: Build and test
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      has-packages: ${{ steps.publishables.outputs.has-packages }}
+      has-docker: ${{ steps.publishables.outputs.has-docker }}
+      publish-target: ${{ steps.context.outputs.publish-target }}
+      is-prerelease: ${{ steps.context.outputs.is-prerelease }}
+      is-plain-version: ${{ steps.context.outputs.is-plain-version }}
+      release-tag: ${{ steps.context.outputs.release-tag }}
+      version: ${{ steps.context.outputs.version }}
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Initialize CI context
+        id: context
+        uses: ./.github/actions/initialize_ci
+
+      - name: Run repository build
+        uses: ./.github/actions/build
+        env:
+          CI_PUBLISH_TARGET: ${{ steps.context.outputs.publish-target }}
+          CI_VERSION: ${{ steps.context.outputs.version }}
+
+      - name: Collect publishable outputs
+        id: publishables
+        if: steps.context.outputs.publish-target != 'none'
+        uses: ./.github/actions/collect_publishables
+
+      - name: Upload CI artifacts
+        if: >-
+          steps.context.outputs.publish-target == 'release' ||
+          steps.publishables.outputs.has-packages == 'true' ||
+          steps.publishables.outputs.has-docker == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ci-artifacts
+          path: .artifacts
+          include-hidden-files: true
+          if-no-files-found: error
+
+  publish_nuget:
+    name: Publish NuGet packages
+    needs: build
+    if: >-
+      needs.build.result == 'success' &&
+      github.event_name == 'push' &&
+      (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/')) &&
+      needs.build.outputs.has-packages == 'true' &&
+      needs.build.outputs.publish-target != 'none'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download CI artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ci-artifacts
+          path: .artifacts
+
+      - name: Publish collected NuGet packages
+        uses: ./.github/actions/publish_nuget
+        with:
+          publish-target: ${{ needs.build.outputs.publish-target }}
+        env:
+          NUGET_GITHUB_TOKEN: ${{ github.token }}
+          NUGET_ORG_KEY: ${{ secrets.NUGET_KEY }}
+
+  publish_docker:
+    name: Publish Docker images
+    needs: build
+    if: >-
+      needs.build.result == 'success' &&
+      github.event_name == 'push' &&
+      (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/')) &&
+      needs.build.outputs.has-docker == 'true' &&
+      needs.build.outputs.publish-target != 'none'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download CI artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ci-artifacts
+          path: .artifacts
+
+      - name: Publish discovered Docker images
+        uses: ./.github/actions/publish_docker
+        with:
+          publish-target: ${{ needs.build.outputs.publish-target }}
+          version: ${{ needs.build.outputs.version }}
+          is-prerelease: ${{ needs.build.outputs.is-prerelease }}
+        env:
+          DOCKER_GITHUB_TOKEN: ${{ github.token }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_KEY: ${{ secrets.DOCKER_KEY }}
+
+  publish_github_release:
+    name: Publish GitHub Release
+    needs:
+      - build
+      - publish_nuget
+      - publish_docker
+    if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      needs.build.outputs.publish-target == 'release' &&
+      (needs.publish_nuget.result == 'success' || needs.publish_nuget.result == 'skipped') &&
+      (needs.publish_docker.result == 'success' || needs.publish_docker.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download CI artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ci-artifacts
+          path: .artifacts
+
+      - name: Publish GitHub Release
+        uses: ./.github/actions/publish_github_release
+        with:
+          release-tag: ${{ needs.build.outputs.release-tag }}
+          is-prerelease: ${{ needs.build.outputs.is-prerelease }}
+        env:
+          GITHUB_RELEASE_TOKEN: ${{ github.token }}
+
+  deploy:
+    name: Deploy
+    needs:
+      - build
+      - publish_github_release
+    if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      needs.build.outputs.publish-target == 'release' &&
+      needs.publish_github_release.result == 'success'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      release-tag: ${{ needs.build.outputs.release-tag }}
+      version: ${{ needs.build.outputs.version }}
+      is-prerelease: ${{ needs.build.outputs.is-prerelease }}
+      is-plain-version: ${{ needs.build.outputs.is-plain-version }}
+    secrets: inherit
+    permissions:
+      contents: read
