@@ -1,0 +1,56 @@
+# This file is centrally managed; local edits may be lost.
+
+name: Prune NuGet versions
+description: Independently retain the newest stable and prerelease package versions
+
+inputs:
+  package-name:
+    description: Published NuGet package ID
+    required: true
+  keep-versions:
+    description: Number of versions retained in each group
+    required: false
+    default: '3'
+  token:
+    description: Token with package Admin access
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate retention count
+      id: retention
+      shell: bash
+      env:
+        KEEP_VERSIONS: ${{ inputs.keep-versions }}
+      run: |
+        set -euo pipefail
+        if [[ ! "$KEEP_VERSIONS" =~ ^[1-9][0-9]*$ ]]; then
+          echo '::error::NUGET_VERSIONS_TO_KEEP must be a positive integer.'
+          exit 1
+        fi
+        echo 'valid=true' >> "$GITHUB_OUTPUT"
+
+    - name: Prune prerelease versions
+      if: steps.retention.outputs.valid == 'true'
+      continue-on-error: true
+      uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+      with:
+        owner: ${{ github.repository_owner }}
+        package-name: ${{ inputs.package-name }}
+        package-type: nuget
+        min-versions-to-keep: ${{ inputs.keep-versions }}
+        ignore-versions: '^[^-]+$'
+        token: ${{ inputs.token }}
+
+    - name: Prune stable versions
+      if: steps.retention.outputs.valid == 'true'
+      continue-on-error: true
+      uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
+      with:
+        owner: ${{ github.repository_owner }}
+        package-name: ${{ inputs.package-name }}
+        package-type: nuget
+        min-versions-to-keep: ${{ inputs.keep-versions }}
+        ignore-versions: '.*-.*'
+        token: ${{ inputs.token }}

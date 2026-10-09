@@ -21,6 +21,7 @@ _ReSharper*/
 packages/
 .tmp/
 tmp/
+.artifacts/
 *.user
 *.local.json
 .terraform/
