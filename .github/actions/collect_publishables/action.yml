@@ -10,8 +10,13 @@ description: Detect package and Docker outputs without publishing
 
 outputs:
   has-packages:
+    description: Whether NuGet package archives were produced
     value: ${{ steps.packages.outputs.has-packages }}
+  package-names:
+    description: JSON array of unique NuGet package IDs read from archive metadata
+    value: ${{ steps.packages.outputs.package-names }}
   has-docker:
+    description: Whether publishable Dockerfiles were discovered
     value: ${{ steps.docker.outputs.has-docker }}
 
 runs:
@@ -31,6 +36,7 @@ runs:
         fi
 
         echo "has-packages=$has_packages" >> "$GITHUB_OUTPUT"
+        python3 "$GITHUB_ACTION_PATH/collect-nuget-package-names.py" >> "$GITHUB_OUTPUT"
 
     - name: Discover Dockerfiles
       id: docker

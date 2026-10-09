@@ -11,6 +11,7 @@
 # Source code files
 *.cs            text diff=csharp eol=lf encoding=utf-8
 *.py            text diff=python eol=lf encoding=utf-8
+*.rb            text eol=lf encoding=utf-8
 *.cshtml        text diff=html eol=lf encoding=utf-8
 *.html		    text diff=html eol=lf encoding=utf-8
 *.json		    text eol=lf encoding=utf-8

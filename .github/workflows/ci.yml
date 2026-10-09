@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has-packages: ${{ steps.publishables.outputs.has-packages }}
+      package-names: ${{ steps.publishables.outputs.package-names }}
       has-docker: ${{ steps.publishables.outputs.has-docker }}
       publish-target: ${{ steps.context.outputs.publish-target }}
       is-prerelease: ${{ steps.context.outputs.is-prerelease }}
@@ -203,3 +204,42 @@ jobs:
     secrets: inherit
     permissions:
       contents: read
+
+  prune_nuget:
+    name: Prune NuGet versions (${{ matrix.package }})
+    needs:
+      - build
+      - publish_nuget
+      - publish_docker
+      - publish_github_release
+      - deploy
+    if: >-
+      always() && !cancelled() &&
+      needs.publish_nuget.result == 'success' &&
+      needs.build.outputs.has-packages == 'true' &&
+      needs.build.outputs.package-names != '' &&
+      needs.build.outputs.package-names != '[]'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        package: ${{ fromJSON(needs.build.outputs.package-names || '[]') }}
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Prune published package
+        uses: ./.github/actions/prune_nuget
+        with:
+          package-name: ${{ matrix.package }}
+          keep-versions: ${{ vars.NUGET_VERSIONS_TO_KEEP || '3' }}
+          token: ${{ github.token }}

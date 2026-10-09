@@ -12,3 +12,25 @@ The files listed below may be present depending on the repository profile. Build
 - `actions/publish_nuget/action.yml` — may publish collected NuGet packages.
 - `actions/publish_docker/action.yml` — may build and publish discovered Docker images.
 - `actions/publish_github_release/action.yml` — may create or update a GitHub Release and upload its assets.
+
+## NuGet retention
+
+After successful NuGet publication, the final CI job prunes the package IDs
+produced by that run. It waits for publishing, GitHub Release, and deployment
+jobs to finish, including failed or skipped downstream jobs. It never runs on a
+schedule and skips cancelled runs or unsuccessful package publication.
+
+The newest three prerelease versions and three stable versions are retained
+independently, by publication date. A hyphen in the version identifies a
+prerelease. Repositories may set a positive integer `nugetVersionsToKeep` in
+`repos.json`; Terraform provisions it as `NUGET_VERSIONS_TO_KEEP`, which applies
+to each group separately. Without an override, each group retains three.
+
+Cleanup is best effort: errors remain visible but do not fail CI, and failure
+in one group does not prevent the other group or other packages from running.
+The pinned deletion action paginates versions and deletes at most 100 versions
+per group per invocation; subsequent publishing runs catch up. The repository
+must have Admin access under each package's Manage Actions access settings.
+This policy affects GitHub Packages only, not NuGet.org or workflow artifacts.
+Custom active workflows must integrate the janitor separately; distributing a
+disabled generic workflow does not activate cleanup.
